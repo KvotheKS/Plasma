@@ -1,11 +1,10 @@
-#include "./class.cpp"
+#include "./Base.h"
 
 Game* Game::instance = nullptr;
 bool Game::allocated = false;
-// Inicializacao de membros static private:
 
-int main()
+int main(int argc, char** argv)
 {
-    Game ge = Game::GetInstance();
-    ge.test();
+    Game ge = Game::GetInstance("Alexsander Correa de Oliveira - 190023562", 1024, 600);
+    ge.Run();
 }
