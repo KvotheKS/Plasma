@@ -6,12 +6,84 @@
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include <cmath>
 
 class Game
 {
 
 public:
+
+///////////////////////////////////////////// Game Vector Class //////////////////////////////////////////////
+
+    class Vec2
+    {
+    public:
+        float x, y;
     
+    public:
+        Vec2(float x = 0.0f, float y = 0.0f);
+        Vec2(const Game::Vec2& vec);
+
+    public:
+        void sum(const Game::Vec2& vec);
+        void sub(const Game::Vec2& vec);
+        void mulc(const float scalar);
+        void divc(const float scalar);
+        float mag();
+        Game::Vec2 norm();
+        float dist(const Game::Vec2& vec);
+        float theta();
+        float theta(const Game::Vec2& vec);
+
+    public:
+        Game::Vec2 sum(const Game::Vec2& vecl, const Game::Vec2& vecr);
+        Game::Vec2 sub(const Game::Vec2& vecl, const Game::Vec2& vecr);
+        Game::Vec2 mulc(const Game::Vec2& vec, const float scalar);
+        Game::Vec2 divc(const Game::Vec2& vec, const float scalar);
+        float mag(const Game::Vec2& vec);
+        Game::Vec2 norm(const Game::Vec2& vec);
+        float dist(const Game::Vec2& vecl, const Game::Vec2& vecr);
+        float theta1(const Game::Vec2& vec);
+        float theta(const Game::Vec2& vecl, const Game::Vec2& vecr);
+
+    public:
+        Game::Vec2 operator+(const Game::Vec2& vec) { return Game::Vec2::sum(*this,vec); }
+        Game::Vec2 operator-(const Game::Vec2& vec) { return Game::Vec2::sub(*this,vec); }
+        Game::Vec2 operator*(const float scalar) { return Game::Vec2::mulc(*this,scalar); }
+        Game::Vec2 operator/(const float scalar) { return Game::Vec2::divc(*this, scalar); }
+
+        Game::Vec2& operator+=(const Game::Vec2& vec) { this->sum(vec); return *this; }
+        Game::Vec2& operator-=(const Game::Vec2& vec) { this->sub(vec); return *this; }
+        Game::Vec2& operator*=(const float scalar) { this->mulc(scalar); return *this; }
+        Game::Vec2& operator/=(const float scalar) { this->divc(scalar); return *this; }
+    };
+
+///////////////////////////////////////////// Game Rect Class ////////////////////////////////////////////////
+
+    class Rect 
+    {
+    public:
+        float x, y, w, h;
+    
+    public:
+        Rect(float x = 0.0f, float y = 0.0f, float w = 0.0f, float h = 0.0f);
+        Rect(const Rect& rect) { Rect(rect.x,rect.y,rect.w,rect.h); }
+
+    public:
+        Game::Vec2 center();
+        float centerDist(const Game::Rect& rect);
+        bool in(const Game::Vec2& vec);
+
+    public:
+        Game::Vec2 center(const Game::Rect& rect) { return Game::Rect(rect).center();}
+        
+        float centerDist(const Game::Rect& rectl, const Game::Rect& rectr)
+        { return Game::Rect(rectl).center().dist(Game::Rect(rectr).center()); }
+
+        bool in(const Game::Rect& rect, const Game::Vec2& vec)
+        { return Game::Rect(rect).in(vec); }
+    };
+
 ///////////////////////////////////////////// Game Music Class ///////////////////////////////////////////////
 
     class Music
@@ -381,4 +453,150 @@ void Game::Music::Play(int times)
 void Game::Music::Stop(int msToStop)
 {
     Mix_FadeOutMusic(msToStop);
+}
+
+///////////////////////////////////////// Game Rect Functions ///////////////////////////////////////////////
+
+Game::Rect::Rect(float x, float y, float w, float h)
+{
+    this->x = x;
+    this->y = y;
+    this->w = w;
+    this->h = h;
+}
+
+Game::Vec2 Game::Rect::center()
+{
+    return Game::Vec2(this->x + (this->w/2), this->y + (this->h/2));
+}
+
+float Game::Rect::centerDist(const Game::Rect& rect)
+{
+    return abs(this->center().dist(Game::Rect(rect).center()));
+}
+
+bool Game::Rect::in(const Game::Vec2& vec)
+{
+    return (this->x <= vec.x && this->x + this->w >= vec.x) &&
+           (this->y <= vec.y && this->y + this->h >= vec.y);
+}
+
+//////////////////////////////////////// Game Vec2 Functions ///////////////////////////////////////////////
+
+Game::Vec2::Vec2(float x, float y)
+{
+    this->x = x;
+    this->y = y;
+}
+
+Game::Vec2::Vec2(const Game::Vec2& vec)
+{
+    this->x = vec.x;
+    this->y = vec.y;
+}
+
+void Game::Vec2::sum(const Game::Vec2& vec)
+{
+    this->x += vec.x;
+    this->y += vec.y;
+}
+
+void Game::Vec2::sub(const Game::Vec2& vec)
+{
+    this->x -= vec.x;
+    this->y -= vec.y;
+}
+
+void Game::Vec2::mulc(const float scalar)
+{
+    this->x *= scalar;
+    this->y *= scalar;
+}
+
+void Game::Vec2::divc(const float scalar)
+{
+    this->x /= scalar;
+    this->y /= scalar;
+}
+
+float Game::Vec2::mag()
+{
+    return sqrt(this->x*this->x + this->y*this->y);
+}
+
+Game::Vec2 Game::Vec2::norm()
+{
+    Game::Vec2 vec(this->x, this->y);
+    vec.divc(vec.mag());
+    return vec;
+}
+
+float Game::Vec2::dist(const Game::Vec2& vec)
+{
+    const float xl = this->x - vec.x;
+    const float yl = this->y - vec.y;
+    return sqrt(xl*xl + yl*yl);
+}
+
+float Game::Vec2::theta()
+{
+    return atan2(this->y, this->x);
+}
+
+float Game::Vec2::theta(const Game::Vec2& vec)
+{
+    return Game::Vec2::sub(*this, vec).theta();
+}
+
+Game::Vec2 Game::Vec2::sum(const Game::Vec2& vecl, const Game::Vec2& vecr)
+{
+    Game::Vec2 rvec(vecl);
+    rvec.sum(vecr);
+    return rvec;
+}
+
+Game::Vec2 Game::Vec2::sub(const Game::Vec2& vecl, const Game::Vec2& vecr)
+{
+    Game::Vec2 rvec(vecl);
+    rvec.sub(vecr);
+    return rvec;
+}
+
+Game::Vec2 Game::Vec2::mulc(const Game::Vec2& vec, const float scalar)
+{
+    Game::Vec2 rvec(vec);
+    rvec.mulc(scalar);
+    return rvec;
+}
+
+Game::Vec2 Game::Vec2::divc(const Game::Vec2& vec, const float scalar)
+{
+    Game::Vec2 rvec(vec);
+    rvec.divc(scalar);
+    return rvec;
+}
+
+float Game::Vec2::mag(const Game::Vec2& vec)
+{
+    return Game::Vec2(vec).mag();
+}
+
+Game::Vec2 Game::Vec2::norm(const Game::Vec2& vec)
+{
+    return Game::Vec2(vec).norm();
+}
+
+float Game::Vec2::dist(const Game::Vec2& vecl, const Game::Vec2& vecr)
+{
+    return Game::Vec2(vecl).dist(vecr);
+}
+
+float Game::Vec2::theta1(const Game::Vec2& vec)
+{
+    return Game::Vec2(vec).theta();
+}
+
+float Game::Vec2::theta(const Game::Vec2& vecl, const Game::Vec2& vecr)
+{
+    return Game::Vec2::sub(vecl, vecr).theta();
 }
