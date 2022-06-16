@@ -28,7 +28,7 @@ public:
     class Sprite;
     class State;
     class GameObject;
-
+    class Face;
 public:
 
 ///////////////////////////////////////////// Game Vector Class //////////////////////////////////////////////
@@ -52,7 +52,7 @@ public:
         float dist(const Game::Vec2& vec);
         float theta();
         float theta(const Game::Vec2& vec);
-        Game::Vec2 Rotate(float angle);
+        Game::Vec2& Rotate(float angle);
 
     public:
         Game::Vec2 sum(const Game::Vec2& vecl, const Game::Vec2& vecr);
@@ -64,8 +64,8 @@ public:
         float dist(const Game::Vec2& vecl, const Game::Vec2& vecr);
         float theta1(const Game::Vec2& vec);
         float theta(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        Game::Vec2 Rotate(Game::Vec2 vec,float angle)
-        { return vec.Rotate(angle); }
+        Game::Vec2& Rotate(Game::Vec2 vec,float angle)
+        { return Game::Vec2(vec).Rotate(angle); }
 
     public:
         Game::Vec2 operator+(const Game::Vec2& vec) { return Game::Vec2::sum(*this,vec); }
@@ -110,11 +110,11 @@ public:
     class Component
     {
     protected:
-        Game::GameObject& associated = *(Game::GameObject*)nullptr;
+        Game::GameObject& associated;
 
     public:
-        Component() {};
-        Component(Game::GameObject& associated) { this->associated = associated; }
+        Component() : associated(*(Game::GameObject*)nullptr) { }
+        Component(Game::GameObject& associated): associated(associated) { }
         virtual ~Component() {};
     
     public:
@@ -134,14 +134,14 @@ public:
         int channel;
 
     public:
-        Sound() {}
-        Sound(Game::GameObject& associated) 
-        { this->associated = associated; this->chunk = nullptr; this->channel = -1; }
+        Sound() : Component() {}
+        Sound(Game::GameObject& associated) : Component(associated) 
+        { this->chunk = nullptr; this->channel = -1; }
         Sound(Game::GameObject& associated, const std::string& file);
         ~Sound() { Mix_FreeChunk(this->chunk); this->chunk = nullptr; }
     
     public:
-        void Play(int times = 1);
+        void Play(int times = 0);
         void Stop();
     
     public:
@@ -159,21 +159,26 @@ public:
 
 ///////////////////////////////////////////// Game Music Class ///////////////////////////////////////////////
 
-    class Music
+    class Music : public Component
     {
     private:
         Mix_Music* music;
     public:
-        Music() { this->music = nullptr; }
-        Music(const std::string& file);
+        Music() : Component() { this->music = nullptr; }
+        Music(Game::GameObject& associated, const std::string& file);
         ~Music();
     public:
         void Play(int times = -1);
         void Stop(int msToStop=1500);
         void Open(const std::string& file);
     public:
+        
+        void Update(float dt) {}
+        void Render() {}
+    public:
         bool IsOpen() { return this->music != nullptr; }
-
+    public:
+        bool Is(const std::string& type) { return type == "Music";}
     };
 
 ///////////////////////////////////////////// Game Sprite Class //////////////////////////////////////////////
@@ -189,6 +194,8 @@ public:
         Sprite();
 
         Sprite(const std::string& file);
+
+        Sprite(Game::GameObject& associated);
 
         Sprite(Game::GameObject& associated, const std::string& file);
 
@@ -252,8 +259,7 @@ public:
     class State
     {
     private:
-        Game::GameObject bg; 
-        Game::Music music;
+        Game::GameObject bg;
         std::vector<std::unique_ptr<Game::GameObject>> objectArray;
         bool quitRequested;
     
@@ -283,7 +289,8 @@ public:
     
     public:
         Face() {}
-        Face(Game::GameObject& associated) { this->associated = associated; this->hitpoints = 30; }
+        Face(Game::GameObject& associated) : Component(associated) 
+        { this->hitpoints = 30; }
         ~Face() {}
     public:
         void Damage(int damage);
@@ -473,13 +480,17 @@ float Game::Vec2::theta(const Game::Vec2& vecl, const Game::Vec2& vecr)
     return Game::Vec2::sub(vecl, vecr).theta();
 }
 
-Game::Vec2 Game::Vec2::Rotate(float angle)
+Game::Vec2& Game::Vec2::Rotate(float angle)
 {
     const float cs = cos(angle), sn = sin(angle);
     
     const float xl = this->x*cs - this->y*sn;
     const float yl = this->y*cs + this->x*sn;
-    return Game::Vec2(x,y);
+
+    this->x = xl;
+    this->y = yl;
+
+    return *this;
 }
 
 ///////////////////////////////////////// Game Rect Functions ///////////////////////////////////////////////
@@ -602,7 +613,6 @@ Game& Game::GetInstance(const char* Title, int width, int height)
 {  
     if(!Game::instance)
     {
-        std::cout << "ok";
         Game::allocated = true;
         Game::instance = new Game(Title, width, height);
     }
@@ -617,7 +627,7 @@ void Game::Run()
         const float dt = ((float)(this->currTick - this->lastTick))/100.0f;
         this->lastTick = this->currTick;   
         this->currTick = SDL_GetTicks64();
-
+        
         this->state->Update(dt);
         
         this->state->Render();
@@ -633,6 +643,7 @@ void Game::Run()
 ////////////////////////////////////////// Game Sound Functions /////////////////////////////////////////////////
 
 Game::Sound::Sound(Game::GameObject& associated, const std::string& file)
+    : Component(associated)
 {
     this->associated = associated; 
     this->chunk = nullptr; 
@@ -644,7 +655,7 @@ void Game::Sound::Play(int times)
 {
     if(this->channel == -1 || !Mix_Playing(this->channel))
         this->channel = Mix_PlayChannel(-1, this->chunk, times);
-
+    
     // ################################################ botar throw exception? erro na musica deveria quebrar tudo?
 }
 
@@ -666,14 +677,15 @@ void Game::Sound::Open(const std::string& file)
 }
 
 void Game::Sound::Update(float dt)
-{ std::cout << "TODO : SOUND UPDATE";}
+{ }
 
 void Game::Sound::Render()
-{ std::cout << "TODO : SOUND RENDER";}
+{ }
 
 ////////////////////////////////////////// Game Music Functions ////////////////////////////////////////////////
 
-Game::Music::Music(const std::string& file)
+Game::Music::Music(Game::GameObject& associated, const std::string& file)
+    : Component(associated)
 {
     Open(file);
 }
@@ -705,9 +717,10 @@ void Game::Music::Stop(int msToStop)
     Mix_FadeOutMusic(msToStop);
 }
 
+
 ///////////////////////////////////////////////// Game Sprites ///////////////////////////////////////////////
 
-Game::Sprite::Sprite()
+Game::Sprite::Sprite() : Component()
 {
     this->texture = nullptr;
     this->width = 0;
@@ -716,12 +729,12 @@ Game::Sprite::Sprite()
 }
 
 Game::Sprite::Sprite(Game::GameObject& associated, const std::string& file)
+ : Component(associated)
 {
-    this->associated = associated;
     this->texture = nullptr;
     this->width = 0;
     this->height = 0;
-    this->clipRect = {0, 0, 0, 0};
+    
     Open(file);
 }
 
@@ -746,10 +759,11 @@ void Game::Sprite::Open(const std::string& file, int x, int y, int w, int h)
 
 void Game::Sprite::Open(const std::string& file)
 {
-    const auto renderer = Game::GetInstance().GetRenderer();
-
+    SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
+    
     if(this->texture)
         SDL_DestroyTexture(this->texture);
+    
     this->texture = IMG_LoadTexture(renderer ,file.c_str());
 
     if(this->texture == nullptr)
@@ -768,7 +782,7 @@ void Game::Sprite::SetClip(int x, int y, int w, int h)
 
 void Game::Sprite::Render()
 {
-    const auto renderer = Game::GetInstance().GetRenderer();
+    SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
     const Game::Rect& wrp = this->associated.box;
     SDL_Rect dst = {
         (int)wrp.x,
@@ -776,6 +790,7 @@ void Game::Sprite::Render()
         (int)wrp.w,
         (int)wrp.h
     };
+    
     SDL_RenderCopy(renderer, this->texture, &this->clipRect, &dst);
 }
 
@@ -858,16 +873,27 @@ Game::State::~State()
 
 void Game::State::LoadAssets()
 {
-    this->bg.AddComponent(new Sprite(this->bg, "./resources/img/ocean.jpg"));
-    this->music.Open("./resources/audio/stageState.ogg");
+    Game& inst = Game::GetInstance();
+    Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
+    Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
+    this->bg.AddComponents({
+        spr,
+        msc
+    });
+
+    this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
 }
 
 void Game::State::Update(float dt)
 {
     this->Input();
-    if(SDL_QuitRequested())
-        this->quitRequested = true;
     
+    if(SDL_QuitRequested())
+    {
+        this->quitRequested = true;
+        return;
+    }
+
     int vSize = this->objectArray.size();
     
     for(int i = 0; i < vSize; i++)
@@ -883,8 +909,11 @@ void Game::State::Update(float dt)
 
 void Game::State::Render()
 {
+    if(this->quitRequested)
+        return;
+
     this->bg.Render();
-    this->music.Play();
+    ((Game::Music*)this->bg.GetComponent("Music"))->Play();
     for(std::vector<std::unique_ptr<Game::GameObject>>::iterator it = this->objectArray.begin();
             it != this->objectArray.end(); ++it)
         (*it)->Render();
@@ -945,6 +974,7 @@ void Game::State::Input() {
 			// Se não, crie um objeto
 			else 
             {
+                std::cout << mouseX << '|' << mouseY << '\n';
 				Game::Vec2 objPos = Game::Vec2( 200, 0 ).Rotate( -M_PI + M_PI*(rand() % 1001)/500.0 ) + Game::Vec2( mouseX, mouseY );
 				AddObject((int)objPos.x, (int)objPos.y);
 			}
@@ -956,30 +986,29 @@ void Game::State::Input() {
 void Game::State::AddObject(int mouseX, int mouseY)
 {
     this->objectArray.push_back(std::unique_ptr<Game::GameObject>(new Game::GameObject()));
-    const int vSize = this->objectArray.size();
+    const int vSize = this->objectArray.size() - 1;
     
     Game::Sprite* spr = new Sprite(*this->objectArray[vSize], "resources/img/penguinface.png");
     Game& gref = Game::GetInstance(); 
-   
+    
     const float windowWidth = gref.GetWidth(), windowHeight = gref.GetHeight();
     const float cW = spr->GetWidth(), cH = spr->GetHeight();
-    const float cX = mouseX < cW ? cW : (mouseX > windowWidth - cW ? windowWidth - cW : mouseX);
-    const float cY = mouseY < cH ? cH : (mouseY > windowHeight - cH ? windowHeight - cH : mouseY);
     
+    const float cX = mouseX < 0 ? 0 : (mouseX > windowWidth - cW ? windowWidth - cW : mouseX);
+    const float cY = mouseY < 0 ? 0 : (mouseY > windowHeight - cH ? windowHeight - cH : mouseY);
+   
     this->objectArray[vSize]->box = {
         cX,
         cY,
         cW,
         cH
     };
-
+    
     this->objectArray[vSize]->AddComponents({
         spr,
         new Sound(*this->objectArray[vSize], "resources/audio/boom.wav"),
         new Face(*this->objectArray[vSize])
     });
-
-
 }
 
 //////////////////////////////////////////////// Game Face Functions ///////////////////////////////////////////
