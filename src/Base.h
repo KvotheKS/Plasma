@@ -804,7 +804,12 @@ Game::GameObject::GameObject()
 }
 
 Game::GameObject::~GameObject()
-{    
+{
+    for(std::vector<Game::Component*>::iterator it = this->components.begin(); 
+                    it != this->components.end(); ++it)
+    {
+        delete (*it);
+    }
     this->components.clear();
 }
     
