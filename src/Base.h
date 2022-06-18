@@ -16,6 +16,7 @@
 #include <initializer_list>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
 
 class Game
 {
@@ -29,6 +30,8 @@ public:
     class State;
     class GameObject;
     class Face;
+    class TileSet;
+    class TileMap;
 public:
 
 ///////////////////////////////////////////// Game Vector Class //////////////////////////////////////////////
@@ -103,6 +106,14 @@ public:
 
         bool in(const Game::Rect& rect, const Game::Vec2& vec)
         { return Game::Rect(rect).in(vec); }
+
+        bool intersect(const Game::Rect& rect)
+        {
+            return in(Game::Vec2(rect.x, rect.y)) ||
+                   in(Game::Vec2(rect.x + rect.w, rect.y)) ||
+                   in(Game::Vec2(rect.x, rect.y + rect.h)) ||
+                   in(Game::Vec2(rect.x + rect.w, rect.y + rect.h));
+        }
     };
 
 ///////////////////////////////////////////// Game Component Class ///////////////////////////////////////////
@@ -127,7 +138,7 @@ public:
 
 ///////////////////////////////////////////// Game Sound Class ///////////////////////////////////////////////
 
-    class Sound : public Component
+    class Sound : public Game::Component
     {
     private:
         Mix_Chunk* chunk;
@@ -159,7 +170,7 @@ public:
 
 ///////////////////////////////////////////// Game Music Class ///////////////////////////////////////////////
 
-    class Music : public Component
+    class Music : public Game::Component
     {
     private:
         Mix_Music* music;
@@ -183,7 +194,7 @@ public:
 
 ///////////////////////////////////////////// Game Sprite Class //////////////////////////////////////////////
 
-    class Sprite : public Component
+    class Sprite : public Game::Component
     {
     private:
         SDL_Texture* texture;
@@ -211,7 +222,7 @@ public:
     public:
         void Update(float dt) {};
         void Render();
-
+        void Render(float x, float y);
     public:
         int GetWidth(){ return this->width; }
         int GetHeight(){ return this->height; }
@@ -282,7 +293,7 @@ public:
 
 ////////////////////////////////////////////// Game Face Class ////////////////////////////////////////////////////
 
-    class Face : public Component
+    class Face : public Game::Component
     {
     private:
         int hitpoints;
@@ -301,6 +312,69 @@ public:
     
     public:
         bool Is(const std::string& type) { return type == "Face";}
+    };
+////////////////////////////////////////////// Game TileSet Class /////////////////////////////////////////////////
+
+    class TileSet
+    {
+    private:
+        Game::Sprite tileSet;
+        int rows, columns;
+        int tileWidth, tileHeight;
+    
+    public:
+        TileSet(int tileWidth, int tileHeight, const std::string& file);
+        void RenderTile(unsigned index, float x, float y);
+
+        int GetTileWidth() { return this->tileWidth; }
+        int GetTileHeight() { return this->tileHeight; }
+        int GetTileNumber() { return this->tileWidth*this->tileHeight; }
+        int GetRows() { return this->rows; }
+        int GetColumns() { return this->columns; }
+    };
+
+////////////////////////////////////////////// Game Class TileMap /////////////////////////////////////////////////
+
+    class TileMap : public Game::Component
+    {
+    private:
+        std::vector<int> tileMatrix;
+        Game::TileSet* tileSet;
+        int mapWidth, mapHeight, mapDepth;
+
+    public:
+        TileMap() : Component() { this->tileSet = nullptr; }
+        TileMap(Game::GameObject& associated, const std::string& file, Game::TileSet* tileSet);
+        
+        ~TileMap() 
+        {
+            if(this->tileSet)
+                delete this->tileSet;
+        }
+
+    public:    
+        void Load(const std::string& file);
+        void SetTileSet(Game::TileSet* tileSet)
+        { this->tileSet = tileSet; }
+
+        int AtIdx(int x, int y, int z = 0)
+        { return this->mapWidth*(z*this->mapHeight + y) + x; }
+        
+        int& At(int x, int y, int z = 0)
+        { return this->tileMatrix[this->mapWidth*(z*this->mapHeight + y) + x]; }
+    
+    public:
+        void Render();
+        void RenderLayer(int layer, int cameraX = 0, int cameraY = 0);
+        void Update(float dt) {}
+    public:
+        bool Is(const std::string& type) { return type == "TileMap"; }
+    public:
+        int GetWidth() { return this->mapWidth; }
+        int GetHeight() { return this->mapHeight; }
+        int GetDepth() { return this->mapDepth; }
+        int GetPWidth() { return this->mapWidth*tileSet->GetTileWidth(); }
+        int GetPHeight() { return this->mapHeight*tileSet->GetTileHeight(); }
     };
 
 ////////////////////////////////////////////// Game Attributes ////////////////////////////////////////////////////
@@ -794,6 +868,20 @@ void Game::Sprite::Render()
     SDL_RenderCopy(renderer, this->texture, &this->clipRect, &dst);
 }
 
+void Game::Sprite::Render(float x, float y)
+{
+    SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
+    
+    SDL_Rect dst = {
+        (int)x,
+        (int)y,
+        this->clipRect.w, 
+        this->clipRect.h
+    };
+
+    SDL_RenderCopy(renderer, this->texture, &this->clipRect, &dst);
+}
+
 
 ///////////////////////////////////////// Game GameObject Functions /////////////////////////////////////////
 
@@ -804,7 +892,12 @@ Game::GameObject::GameObject()
 }
 
 Game::GameObject::~GameObject()
-{    
+{
+    for(std::vector<Game::Component*>::iterator it = this->components.begin(); 
+                    it != this->components.end(); ++it)
+    {
+        delete (*it);
+    }
     this->components.clear();
 }
     
@@ -876,12 +969,25 @@ void Game::State::LoadAssets()
     Game& inst = Game::GetInstance();
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
     Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
+    
     this->bg.AddComponents({
         spr,
-        msc
+        msc,
     });
 
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
+
+    GameObject* go = new GameObject();
+    TileMap* map = new TileMap(
+        *go , 
+        "./resources/map/tileMap.txt", 
+        new TileSet(64, 64, "./resources/img/tileSet.png")
+    );
+
+    go->box = { 0, 0, (float)map->GetPWidth(), (float)map->GetPHeight() };
+    
+    go->AddComponent(map);
+    this->objectArray.push_back(std::unique_ptr<Game::GameObject>(go));
 }
 
 void Game::State::Update(float dt)
@@ -974,8 +1080,7 @@ void Game::State::Input() {
 			// Se não, crie um objeto
 			else 
             {
-                std::cout << mouseX << '|' << mouseY << '\n';
-				Game::Vec2 objPos = Game::Vec2( 200, 0 ).Rotate( -M_PI + M_PI*(rand() % 1001)/500.0 ) + Game::Vec2( mouseX, mouseY );
+                Game::Vec2 objPos = Game::Vec2( 200, 0 ).Rotate( -M_PI + M_PI*(rand() % 1001)/500.0 ) + Game::Vec2( mouseX, mouseY );
 				AddObject((int)objPos.x, (int)objPos.y);
 			}
 		}
@@ -1033,3 +1138,113 @@ void Game::Face::Death()
 void Game::Face::Update(float dt) {}
 
 void Game::Face::Render() {}
+
+///////////////////////////////////// Game TileSet Functions ////////////////////////////
+
+Game::TileSet::TileSet(int tileWidth, int tileHeight, const std::string& file)
+{
+    this->tileWidth = tileWidth;
+    this->tileHeight = tileHeight;
+    
+    this->tileSet.Open(file);
+    this->rows = this->tileSet.GetHeight()/this->tileHeight;
+    this->columns = this->tileSet.GetWidth()/this->tileWidth;
+}
+
+void Game::TileSet::RenderTile(unsigned index, float x, float y)
+{
+    if(index >= 0 && index < this->GetTileNumber())
+    {
+        const int tileWN = this->columns;
+        const int tileHN = this->rows;
+
+        const int wIndex = index%tileWN;
+        const int hIndex = index/tileWN;
+        
+        this->tileSet.SetClip(
+            wIndex*this->tileWidth,
+            hIndex*this->tileHeight,
+            this->tileWidth,
+            this->tileHeight       
+        );
+
+        this->tileSet.Render(x,y);
+    }
+}
+
+////////////////////////////////////////// Game TileMap functions ////////////////////////////////
+
+Game::TileMap::TileMap(Game::GameObject& associated, 
+            const std::string& file, Game::TileSet* tileSet)
+    : Component(associated)
+{
+    Load(file);
+    SetTileSet(tileSet);
+}
+    
+void Game::TileMap::Load(const std::string& file)
+{
+    FILE* fl = fopen(file.c_str(), "r");
+    
+    fscanf(fl, "%d,%d,%d,", &this->mapWidth, &this->mapHeight, &this->mapDepth);
+
+    this->tileMatrix.resize(this->mapWidth*this->mapHeight*this->mapDepth);
+    
+    int tmp;
+    const int vSize = this->mapHeight*this->mapWidth*this->mapDepth;
+    
+    for(int i = 0; i < vSize; i++)
+    {
+        fscanf(fl, "%d,", &tmp);
+        this->tileMatrix[i] = tmp - 1; 
+    } 
+}
+
+void Game::TileMap::Render()
+{
+    Game& inst = Game::GetInstance();
+    int cameraX = 0, cameraY = 0;
+   
+    if(!this->associated.box.intersect({ (float)cameraX, (float)cameraY, 
+                            (float)inst.GetWidth(), (float)inst.GetHeight()}))
+    {
+        return;
+    }
+
+    for(int i = 0; i < this->mapDepth; i++)
+        RenderLayer(i, cameraX, cameraY);
+}
+
+//////////////////////// TO-DO implementar algo que seja inteligente 
+//////////////////////// As is, essa tranqueira eh lenta pra caramba.
+void Game::TileMap::RenderLayer(int layer, int cameraX, int cameraY)
+{
+    Game& inst = Game::GetInstance();
+    
+    const int tW = this->tileSet->GetTileWidth();
+    const int tH = this->tileSet->GetTileHeight();
+
+    const int rowW = GetPWidth();
+
+    const int fs = AtIdx(0,0,layer);
+    const int ls = AtIdx(0,0,layer+1);
+    int x = this->associated.box.x, y = this->associated.box.y;
+    
+    Game::Rect tileR = { (float)x, (float)y, (float)tW, (float)tH};
+    
+    const Game::Rect dscWindow = { (float)cameraX, (float)cameraY, (float)inst.GetWidth(), (float)inst.GetHeight() };
+    
+    for(int i = fs; i < ls; i++)
+    {
+        if(this->tileMatrix[i] != -1 ||
+           tileR.intersect(dscWindow))
+        {
+            this->tileSet->RenderTile(this->tileMatrix[i], x - cameraX, y - cameraY);
+        }
+        x = (x + tW)%rowW;
+
+        y += tH*(x==0);
+        x += this->associated.box.x*(x==0);
+        tileR.x = x; tileR.y = y;
+    }
+}
