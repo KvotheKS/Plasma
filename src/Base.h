@@ -158,7 +158,7 @@ public:
         Sound(Game::GameObject& associated) : Component(associated) 
         { this->chunk = nullptr; this->channel = -1; }
         Sound(Game::GameObject& associated, const std::string& file);
-        ~Sound() { Mix_FreeChunk(this->chunk); this->chunk = nullptr; }
+        ~Sound() { this->chunk = nullptr; }
     
     public:
         void Play(int times = 0);
@@ -769,7 +769,6 @@ void Game::Sound::Play(int times)
     if(this->channel == -1 || !Mix_Playing(this->channel))
     {
         this->channel = Mix_PlayChannel(-1, this->chunk, times);
-        std::cout << this->channel << ' ' << this->chunk << '|';
     }
     // ################################################ botar throw exception? erro na musica deveria quebrar tudo?
 }
