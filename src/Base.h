@@ -17,6 +17,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
+#include <algorithm>
+#include <unordered_map>
 
 class Game
 {
@@ -32,6 +34,8 @@ public:
     class Face;
     class TileSet;
     class TileMap;
+    class Resources;
+
 public:
 
 ///////////////////////////////////////////// Game Vector Class //////////////////////////////////////////////
@@ -97,7 +101,7 @@ public:
         Game::Vec2 center();
         float centerDist(const Game::Rect& rect);
         bool in(const Game::Vec2& vec);
-
+    
     public:
         Game::Vec2 center(const Game::Rect& rect) { return Game::Rect(rect).center();}
         
@@ -114,6 +118,11 @@ public:
                    in(Game::Vec2(rect.x, rect.y + rect.h)) ||
                    in(Game::Vec2(rect.x + rect.w, rect.y + rect.h));
         }
+
+        Game::Rect intersection(const Game::Rect& rect);
+    
+    public:
+        Game::Rect copy() { return {this->x, this->y, this->w, this->h}; }
     };
 
 ///////////////////////////////////////////// Game Component Class ///////////////////////////////////////////
@@ -365,16 +374,40 @@ public:
     
     public:
         void Render();
-        void RenderLayer(int layer, int cameraX = 0, int cameraY = 0);
+        void RenderLayer(int layer, const Game::Rect& toRender, const Game::Rect& tSetC);
         void Update(float dt) {}
+    
     public:
         bool Is(const std::string& type) { return type == "TileMap"; }
+    
     public:
         int GetWidth() { return this->mapWidth; }
         int GetHeight() { return this->mapHeight; }
         int GetDepth() { return this->mapDepth; }
         int GetPWidth() { return this->mapWidth*tileSet->GetTileWidth(); }
         int GetPHeight() { return this->mapHeight*tileSet->GetTileHeight(); }
+    
+    public:
+        Game::Rect adapt(const Game::Rect& tSetC);
+        Game::Rect tileCord(Game::Rect& tSetC);
+    };
+
+    class Resources
+    {
+    private:
+        std::unordered_map<std::string, SDL_Texture*> imageTable;
+        std::unordered_map<std::string, Mix_Music*> musicTable;
+        std::unordered_map<std::string, Mix_Chunk*> soundTable;
+    
+    public:
+        SDL_Texture* GetImage(const std::string& file);
+        Mix_Music* GetMusic(const std::string& file);
+        Mix_Chunk* GetSound(const std::string& file);
+    
+    public:
+        void ClearImages() { this->imageTable.clear();}
+        void ClearMusics() { this->musicTable.clear();}
+        void ClearSounds() { this->soundTable.clear();}
     };
 
 ////////////////////////////////////////////// Game Attributes ////////////////////////////////////////////////////
@@ -424,14 +457,6 @@ public:
 
 public:
     void Run();
-
-    void test()
-    {
-        SDL_SetRenderDrawColor(this->renderer, 0, 255, 0, 255);
-        SDL_RenderClear(this->renderer);
-        SDL_RenderPresent(this->renderer);
-        SDL_Delay(3000);
-    }
 };
 
 //////////////////////////////////////// Game Vec2 Functions ///////////////////////////////////////////////
@@ -591,6 +616,17 @@ bool Game::Rect::in(const Game::Vec2& vec)
 {
     return (this->x <= vec.x && this->x + this->w >= vec.x) &&
            (this->y <= vec.y && this->y + this->h >= vec.y);
+}
+
+Game::Rect Game::Rect::intersection(const Game::Rect& rect)
+{
+    
+    const float xl = std::max(rect.x, this->x);    
+    const float yl = std::max(rect.y, this->y);
+    const float wl = std::min(rect.x+rect.w, this->x+this->w) - xl;
+    const float hl = std::min(rect.y+rect.h, this->y+this->h) - yl;
+    
+    return {xl, yl, wl, hl};
 }
 
 /////////////////////////////////////////////// Game Base Functions /////////////////////////////////////////////////////////
@@ -1200,51 +1236,75 @@ void Game::TileMap::Load(const std::string& file)
     } 
 }
 
+Game::Rect Game::TileMap::adapt(const Game::Rect& tSetC)
+{
+    const float tW = this->tileSet->GetTileWidth();
+    const float tH = this->tileSet->GetTileHeight();
+    
+    const float xl = floor(tSetC.x/tW)*tW;
+    const float yl = floor(tSetC.y/tH)*tH;
+
+    const float wl = ceil((tSetC.x+tSetC.w)/tW)*tW;
+    const float hl = ceil((tSetC.y+tSetC.h)/tH)*tH;
+    
+    return {xl,yl,wl,hl};
+}
+
+Game::Rect Game::TileMap::tileCord(Game::Rect& tSetC)
+{
+    /*
+        Retorna as coordenadas do primeiro tile a ser renderizado e tambem
+        as do ultimo. Assume que tSetC esta alinhado com o tileset e associated.box
+    */
+    const float tW = this->tileSet->GetTileWidth();
+    const float tH = this->tileSet->GetTileHeight();
+
+    const float xl = tSetC.x/tW;
+    const float yl = tSetC.y/tH;
+
+    const float x2l = (tSetC.x + tSetC.w)/tW;
+    const float y2l = (tSetC.y + tSetC.h)/tH;
+
+    return {xl,yl,x2l,y2l};
+}
+
 void Game::TileMap::Render()
 {
     Game& inst = Game::GetInstance();
-    int cameraX = 0, cameraY = 0;
-   
-    if(!this->associated.box.intersect({ (float)cameraX, (float)cameraY, 
-                            (float)inst.GetWidth(), (float)inst.GetHeight()}))
-    {
-        return;
-    }
 
+    int cameraX = 0, cameraY = 0;
+
+    Game::Rect gCamera = { (float)cameraX, (float)cameraY, 
+                           (float)inst.GetWidth(), (float)inst.GetHeight() };
+
+    if(!this->associated.box.intersect(gCamera))
+        return;
+    
+    Game::Rect toRender = adapt(gCamera.intersection(this->associated.box.copy()));
+    Game::Rect tSetC = tileCord(toRender);
+    
     for(int i = 0; i < this->mapDepth; i++)
-        RenderLayer(i, cameraX, cameraY);
+        RenderLayer(i, toRender, tSetC);
 }
 
-//////////////////////// TO-DO implementar algo que seja inteligente 
-//////////////////////// As is, essa tranqueira eh lenta pra caramba.
-void Game::TileMap::RenderLayer(int layer, int cameraX, int cameraY)
+void Game::TileMap::RenderLayer(int layer, const Game::Rect& toRender, const Game::Rect& tSetC)
 {
     Game& inst = Game::GetInstance();
     
     const int tW = this->tileSet->GetTileWidth();
     const int tH = this->tileSet->GetTileHeight();
 
-    const int rowW = GetPWidth();
+    const int fs = AtIdx(tSetC.x, tSetC.y, layer);
 
-    const int fs = AtIdx(0,0,layer);
-    const int ls = AtIdx(0,0,layer+1);
-    int x = this->associated.box.x, y = this->associated.box.y;
-    
-    Game::Rect tileR = { (float)x, (float)y, (float)tW, (float)tH};
-    
-    const Game::Rect dscWindow = { (float)cameraX, (float)cameraY, (float)inst.GetWidth(), (float)inst.GetHeight() };
-    
-    for(int i = fs; i < ls; i++)
-    {
-        if(this->tileMatrix[i] != -1 ||
-           tileR.intersect(dscWindow))
+    const int nxt = AtIdx(tSetC.x, tSetC.y+1, layer) - AtIdx(tSetC.w, tSetC.y, layer);
+
+    int x = toRender.x, y = toRender.y;
+
+    for(int i = fs, y = toRender.y; y < toRender.y + toRender.h; y+=tH, i+=nxt)
+        for(int x = toRender.x; x < toRender.x + toRender.w; i++, x+=tW)
         {
-            this->tileSet->RenderTile(this->tileMatrix[i], x - cameraX, y - cameraY);
+            if(this->tileMatrix[i] != -1)
+                this->tileSet->RenderTile(this->tileMatrix[i], x, y);
+            
         }
-        x = (x + tW)%rowW;
-
-        y += tH*(x==0);
-        x += this->associated.box.x*(x==0);
-        tileR.x = x; tileR.y = y;
-    }
 }
