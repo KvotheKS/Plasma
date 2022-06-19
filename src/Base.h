@@ -62,16 +62,16 @@ public:
         Game::Vec2& Rotate(float angle);
 
     public:
-        Game::Vec2 sum(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        Game::Vec2 sub(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        Game::Vec2 mulc(const Game::Vec2& vec, const float scalar);
-        Game::Vec2 divc(const Game::Vec2& vec, const float scalar);
-        float mag(const Game::Vec2& vec);
-        Game::Vec2 norm(const Game::Vec2& vec);
-        float dist(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        float theta1(const Game::Vec2& vec);
-        float theta(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        Game::Vec2& Rotate(Game::Vec2 vec,float angle)
+        static Game::Vec2 sum(const Game::Vec2& vecl, const Game::Vec2& vecr);
+        static Game::Vec2 sub(const Game::Vec2& vecl, const Game::Vec2& vecr);
+        static Game::Vec2 mulc(const Game::Vec2& vec, const float scalar);
+        static Game::Vec2 divc(const Game::Vec2& vec, const float scalar);
+        static float mag(const Game::Vec2& vec);
+        static Game::Vec2 norm(const Game::Vec2& vec);
+        static float dist(const Game::Vec2& vecl, const Game::Vec2& vecr);
+        static float theta1(const Game::Vec2& vec);
+        static float theta(const Game::Vec2& vecl, const Game::Vec2& vecr);
+        static Game::Vec2& Rotate(Game::Vec2 vec,float angle)
         { return Game::Vec2(vec).Rotate(angle); }
 
     public:
@@ -161,7 +161,7 @@ public:
         ~Sound() { Mix_FreeChunk(this->chunk); this->chunk = nullptr; }
     
     public:
-        void Play(int times = 0);
+        void Play(int times = 1);
         void Stop();
     
     public:
@@ -189,12 +189,12 @@ public:
         ~Music();
     public:
         void Play(int times = -1);
-        void Stop(int msToStop=1500);
+        void Stop(int msToStop = 1500);
         void Open(const std::string& file);
     public:
         
         void Update(float dt) {}
-        void Render() {}
+        void Render() { Play(); }
     public:
         bool IsOpen() { return this->music != nullptr; }
     public:
@@ -395,19 +395,19 @@ public:
     class Resources
     {
     private:
-        std::unordered_map<std::string, SDL_Texture*> imageTable;
-        std::unordered_map<std::string, Mix_Music*> musicTable;
-        std::unordered_map<std::string, Mix_Chunk*> soundTable;
+        static std::unordered_map<std::string, SDL_Texture*> imageTable;
+        static std::unordered_map<std::string, Mix_Music*> musicTable;
+        static std::unordered_map<std::string, Mix_Chunk*> soundTable;
     
     public:
-        SDL_Texture* GetImage(const std::string& file);
-        Mix_Music* GetMusic(const std::string& file);
-        Mix_Chunk* GetSound(const std::string& file);
+        static SDL_Texture* GetImage(const std::string&  file);
+        static Mix_Music* GetMusic(const std::string&  file);
+        static Mix_Chunk* GetSound(const std::string&  file);
     
     public:
-        void ClearImages() { this->imageTable.clear();}
-        void ClearMusics() { this->musicTable.clear();}
-        void ClearSounds() { this->soundTable.clear();}
+        static void ClearImages();
+        static void ClearMusics();
+        static void ClearSounds();
     };
 
 ////////////////////////////////////////////// Game Attributes ////////////////////////////////////////////////////
@@ -764,8 +764,10 @@ Game::Sound::Sound(Game::GameObject& associated, const std::string& file)
 void Game::Sound::Play(int times)
 {
     if(this->channel == -1 || !Mix_Playing(this->channel))
+    {
         this->channel = Mix_PlayChannel(-1, this->chunk, times);
-    
+        std::cout << this->channel << ' ' << this->chunk << '|';
+    }
     // ################################################ botar throw exception? erro na musica deveria quebrar tudo?
 }
 
@@ -779,11 +781,8 @@ void Game::Sound::Stop()
 }
 
 void Game::Sound::Open(const std::string& file)
-{
-    if(this->chunk)
-        Mix_FreeChunk(this->chunk);
-    
-    this->chunk = Mix_LoadWAV(file.c_str());
+{ 
+    this->chunk = Game::Resources::GetSound(file);
 }
 
 void Game::Sound::Update(float dt)
@@ -803,15 +802,12 @@ Game::Music::Music(Game::GameObject& associated, const std::string& file)
 Game::Music::~Music()
 {
     if(this->music)
-    {
         Stop();
-        Mix_FreeMusic(this->music);
-    }
 }
 
 void Game::Music::Open(const std::string& file)
 {
-    this->music = Mix_LoadMUS(file.c_str());
+    this->music = Game::Resources::GetMusic(file);
 }
 
 void Game::Music::Play(int times)
@@ -851,10 +847,7 @@ Game::Sprite::Sprite(Game::GameObject& associated, const std::string& file)
 Game::Sprite::~Sprite()
 {
     if(this->texture)
-    {
-        SDL_DestroyTexture(this->texture);
         this->texture = nullptr;
-    }
 }
 
 void Game::Sprite::Open(const std::string& file, int x, int y, int w, int h)
@@ -869,12 +862,7 @@ void Game::Sprite::Open(const std::string& file, int x, int y, int w, int h)
 
 void Game::Sprite::Open(const std::string& file)
 {
-    SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
-    
-    if(this->texture)
-        SDL_DestroyTexture(this->texture);
-    
-    this->texture = IMG_LoadTexture(renderer ,file.c_str());
+    this->texture = Game::Resources::GetImage(file);
 
     if(this->texture == nullptr)
         Game::ThrowException();
@@ -1004,13 +992,13 @@ void Game::State::LoadAssets()
 {
     Game& inst = Game::GetInstance();
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
-    Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
+    // Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
     
     this->bg.AddComponents({
         spr,
-        msc,
+    //    msc,
     });
-
+    
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
 
     GameObject* go = new GameObject();
@@ -1055,7 +1043,6 @@ void Game::State::Render()
         return;
 
     this->bg.Render();
-    ((Game::Music*)this->bg.GetComponent("Music"))->Play();
     for(std::vector<std::unique_ptr<Game::GameObject>>::iterator it = this->objectArray.begin();
             it != this->objectArray.end(); ++it)
         (*it)->Render();
@@ -1307,4 +1294,66 @@ void Game::TileMap::RenderLayer(int layer, const Game::Rect& toRender, const Gam
                 this->tileSet->RenderTile(this->tileMatrix[i], x, y);
             
         }
+}
+
+/////////////////////////////////////////////////// Game Resources Functions ///////////////////////////////////////////
+
+SDL_Texture* Game::Resources::GetImage(const std::string& file)
+{
+    SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
+    std::unordered_map<std::string, SDL_Texture*>::iterator it = imageTable.find(file);
+    
+    if(it == imageTable.end())
+        it = imageTable.insert({file, IMG_LoadTexture(renderer, file.c_str())}).first;
+    
+    return it->second;
+}
+
+Mix_Music* Game::Resources::GetMusic(const std::string& file)
+{
+    SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
+    std::unordered_map<std::string, Mix_Music*>::iterator it = musicTable.find(file);
+    
+    if(it == musicTable.end())
+        it = musicTable.insert({file, Mix_LoadMUS(file.c_str())}).first;
+    
+    return it->second;
+}
+
+Mix_Chunk* Game::Resources::GetSound(const std::string& file)
+{
+    SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
+    std::unordered_map<std::string, Mix_Chunk*>::iterator it = soundTable.find(file);
+    
+    if(it == soundTable.end())
+        it = soundTable.insert({file, Mix_LoadWAV(file.c_str())}).first;
+    
+    return it->second;
+}
+
+void Game::Resources::ClearImages() 
+{ 
+    for(std::unordered_map<std::string, SDL_Texture*>::iterator it = imageTable.begin();
+                it == imageTable.end(); it++)
+        SDL_DestroyTexture(it->second);
+
+    imageTable.clear();
+}
+
+void Game::Resources::ClearMusics() 
+{ 
+    for(std::unordered_map<std::string, Mix_Music*>::iterator it = musicTable.begin();
+                it == musicTable.end(); it++)
+        Mix_FreeMusic(it->second);
+        
+    musicTable.clear();
+}
+
+void Game::Resources::ClearSounds() 
+{ 
+    for(std::unordered_map<std::string, Mix_Chunk*>::iterator it = soundTable.begin();
+                it == soundTable.end(); it++)
+        Mix_FreeChunk(it->second);
+        
+    soundTable.clear();
 }
