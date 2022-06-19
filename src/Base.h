@@ -161,7 +161,7 @@ public:
         ~Sound() { Mix_FreeChunk(this->chunk); this->chunk = nullptr; }
     
     public:
-        void Play(int times = 1);
+        void Play(int times = 0);
         void Stop();
     
     public:
@@ -746,6 +746,9 @@ void Game::Run()
         
         SDL_Delay(this->period);
     }
+    Game::Resources::ClearImages();
+    Game::Resources::ClearMusics();
+    Game::Resources::ClearSounds();
 }
 
 ///////////////////////////////////////// Game Component Functions //////////////////////////////////////////
@@ -775,6 +778,7 @@ void Game::Sound::Stop()
 {
     if(this->channel != -1 && this->chunk != nullptr)
     {
+        
         Mix_HaltChannel(this->channel);
         this->channel = -1;
     }
@@ -1113,11 +1117,12 @@ void Game::State::Input() {
 //////////////// to-do: box, unique_ptr em GameObject.
 void Game::State::AddObject(int mouseX, int mouseY)
 {
+    Game& gref = Game::GetInstance(); 
+
     this->objectArray.push_back(std::unique_ptr<Game::GameObject>(new Game::GameObject()));
     const int vSize = this->objectArray.size() - 1;
     
     Game::Sprite* spr = new Sprite(*this->objectArray[vSize], "resources/img/penguinface.png");
-    Game& gref = Game::GetInstance(); 
     
     const float windowWidth = gref.GetWidth(), windowHeight = gref.GetHeight();
     const float cW = spr->GetWidth(), cH = spr->GetHeight();
@@ -1334,7 +1339,7 @@ Mix_Chunk* Game::Resources::GetSound(const std::string& file)
 void Game::Resources::ClearImages() 
 { 
     for(std::unordered_map<std::string, SDL_Texture*>::iterator it = imageTable.begin();
-                it == imageTable.end(); it++)
+                it != imageTable.end(); it++)
         SDL_DestroyTexture(it->second);
 
     imageTable.clear();
@@ -1343,7 +1348,7 @@ void Game::Resources::ClearImages()
 void Game::Resources::ClearMusics() 
 { 
     for(std::unordered_map<std::string, Mix_Music*>::iterator it = musicTable.begin();
-                it == musicTable.end(); it++)
+                it != musicTable.end(); it++)
         Mix_FreeMusic(it->second);
         
     musicTable.clear();
@@ -1352,7 +1357,7 @@ void Game::Resources::ClearMusics()
 void Game::Resources::ClearSounds() 
 { 
     for(std::unordered_map<std::string, Mix_Chunk*>::iterator it = soundTable.begin();
-                it == soundTable.end(); it++)
+                it != soundTable.end(); it++)
         Mix_FreeChunk(it->second);
         
     soundTable.clear();
