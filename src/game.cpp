@@ -2,9 +2,11 @@
 
 Game* Game::instance = nullptr;
 bool Game::allocated = false;
-std::unordered_map<std::string, SDL_Texture*> Game::Resources::imageTable;
-std::unordered_map<std::string, Mix_Music*> Game::Resources::musicTable;
-std::unordered_map<std::string, Mix_Chunk*> Game::Resources::soundTable;
+std::unordered_map<std::string, SDL_Texture*> Resources::imageTable;
+std::unordered_map<std::string, Mix_Music*> Resources::musicTable;
+std::unordered_map<std::string, Mix_Chunk*> Resources::soundTable;
+Vec2 Camera::pos = {0,0}, Camera::speed = {10,10};
+GameObject* Camera::focus = nullptr;
 
 int main(int argc, char** argv)
 {

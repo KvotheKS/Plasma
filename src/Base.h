@@ -1,3 +1,6 @@
+//////////////////////////// mudanca da parte 3 para a 4!
+//////////////////////////// a partir de agora, as classes serao separadas
+//////////////////////////// nao mais dentro da Game, mas sim de um namespace.
 #pragma once
 
 #include <./SDL2/SDL.h>
@@ -20,396 +23,34 @@
 #include <algorithm>
 #include <unordered_map>
 
+
+#define LEFT_ARROW_KEY    SDLK_LEFT 
+#define RIGHT_ARROW_KEY   SDLK_RIGHT 
+#define UP_ARROW_KEY      SDLK_UP 
+#define DOWN_ARROW_KEY    SDLK_DOWN 
+#define ESCAPE_KEY        SDLK_ESCAPE 
+#define SPACEBAR_KEY      SDLK_SPACE
+#define LEFT_MOUSE_BUTTON SDL_BUTTON_LEFT
+
+class Vec2;
+class Rect;
+class Game;
+class Component;
+class Sound;
+class Music;
+class Sprite;
+class State;
+class GameObject;
+class Face;
+class TileSet;
+class TileMap;
+class Resources;
+class InputManager;
+class Camera;
+class CameraFollower;
+
 class Game
 {
-public:
-    class Vec2;
-    class Rect;
-    class Component;
-    class Sound;
-    class Music;
-    class Sprite;
-    class State;
-    class GameObject;
-    class Face;
-    class TileSet;
-    class TileMap;
-    class Resources;
-
-public:
-
-///////////////////////////////////////////// Game Vector Class //////////////////////////////////////////////
-
-    class Vec2
-    {
-    public:
-        float x, y;
-    
-    public:
-        Vec2(float x = 0.0f, float y = 0.0f);
-        Vec2(const Game::Vec2& vec);
-
-    public:
-        void sum(const Game::Vec2& vec);
-        void sub(const Game::Vec2& vec);
-        void mulc(const float scalar);
-        void divc(const float scalar);
-        float mag();
-        Game::Vec2 norm();
-        float dist(const Game::Vec2& vec);
-        float theta();
-        float theta(const Game::Vec2& vec);
-        Game::Vec2& Rotate(float angle);
-
-    public:
-        static Game::Vec2 sum(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        static Game::Vec2 sub(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        static Game::Vec2 mulc(const Game::Vec2& vec, const float scalar);
-        static Game::Vec2 divc(const Game::Vec2& vec, const float scalar);
-        static float mag(const Game::Vec2& vec);
-        static Game::Vec2 norm(const Game::Vec2& vec);
-        static float dist(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        static float theta1(const Game::Vec2& vec);
-        static float theta(const Game::Vec2& vecl, const Game::Vec2& vecr);
-        static Game::Vec2& Rotate(Game::Vec2 vec,float angle)
-        { return Game::Vec2(vec).Rotate(angle); }
-
-    public:
-        Game::Vec2 operator+(const Game::Vec2& vec) { return Game::Vec2::sum(*this,vec); }
-        Game::Vec2 operator-(const Game::Vec2& vec) { return Game::Vec2::sub(*this,vec); }
-        Game::Vec2 operator*(const float scalar) { return Game::Vec2::mulc(*this,scalar); }
-        Game::Vec2 operator/(const float scalar) { return Game::Vec2::divc(*this, scalar); }
-
-        Game::Vec2& operator+=(const Game::Vec2& vec) { this->sum(vec); return *this; }
-        Game::Vec2& operator-=(const Game::Vec2& vec) { this->sub(vec); return *this; }
-        Game::Vec2& operator*=(const float scalar) { this->mulc(scalar); return *this; }
-        Game::Vec2& operator/=(const float scalar) { this->divc(scalar); return *this; }
-    };
-
-///////////////////////////////////////////// Game Rect Class ////////////////////////////////////////////////
-
-    class Rect 
-    {
-    public:
-        float x, y, w, h;
-    
-    public:
-        Rect(float x = 0.0f, float y = 0.0f, float w = 0.0f, float h = 0.0f);
-        Rect(const Rect& rect) { Rect(rect.x,rect.y,rect.w,rect.h); }
-
-    public:
-        Game::Vec2 center();
-        float centerDist(const Game::Rect& rect);
-        bool in(const Game::Vec2& vec);
-    
-    public:
-        Game::Vec2 center(const Game::Rect& rect) { return Game::Rect(rect).center();}
-        
-        float centerDist(const Game::Rect& rectl, const Game::Rect& rectr)
-        { return Game::Rect(rectl).center().dist(Game::Rect(rectr).center()); }
-
-        bool in(const Game::Rect& rect, const Game::Vec2& vec)
-        { return Game::Rect(rect).in(vec); }
-
-        bool intersect(const Game::Rect& rect)
-        {
-            return in(Game::Vec2(rect.x, rect.y)) ||
-                   in(Game::Vec2(rect.x + rect.w, rect.y)) ||
-                   in(Game::Vec2(rect.x, rect.y + rect.h)) ||
-                   in(Game::Vec2(rect.x + rect.w, rect.y + rect.h));
-        }
-
-        Game::Rect intersection(const Game::Rect& rect);
-    
-    public:
-        Game::Rect copy() { return {this->x, this->y, this->w, this->h}; }
-    };
-
-///////////////////////////////////////////// Game Component Class ///////////////////////////////////////////
-
-    class Component
-    {
-    protected:
-        Game::GameObject& associated;
-
-    public:
-        Component() : associated(*(Game::GameObject*)nullptr) { }
-        Component(Game::GameObject& associated): associated(associated) { }
-        virtual ~Component() {};
-    
-    public:
-        virtual void Update(float dt) = 0;
-        virtual void Render() = 0;
-    
-    public:
-        virtual bool Is(const std::string& type) = 0;
-    };
-
-///////////////////////////////////////////// Game Sound Class ///////////////////////////////////////////////
-
-    class Sound : public Game::Component
-    {
-    private:
-        Mix_Chunk* chunk;
-        int channel;
-
-    public:
-        Sound() : Component() {}
-        Sound(Game::GameObject& associated) : Component(associated) 
-        { this->chunk = nullptr; this->channel = -1; }
-        Sound(Game::GameObject& associated, const std::string& file);
-        ~Sound() { this->chunk = nullptr; }
-    
-    public:
-        void Play(int times = 0);
-        void Stop();
-    
-    public:
-        void Open(const std::string& file);
-        bool IsOpen() { return this->chunk != nullptr; }
-    
-    public:
-        void Update(float dt);
-        void Render();
-    
-    public:
-        bool Is(const std::string& type) { return type == "Sound"; }
-
-    };
-
-///////////////////////////////////////////// Game Music Class ///////////////////////////////////////////////
-
-    class Music : public Game::Component
-    {
-    private:
-        Mix_Music* music;
-    public:
-        Music() : Component() { this->music = nullptr; }
-        Music(Game::GameObject& associated, const std::string& file);
-        ~Music();
-    public:
-        void Play(int times = -1);
-        void Stop(int msToStop = 1500);
-        void Open(const std::string& file);
-    public:
-        
-        void Update(float dt) {}
-        void Render() { Play(); }
-    public:
-        bool IsOpen() { return this->music != nullptr; }
-    public:
-        bool Is(const std::string& type) { return type == "Music";}
-    };
-
-///////////////////////////////////////////// Game Sprite Class //////////////////////////////////////////////
-
-    class Sprite : public Game::Component
-    {
-    private:
-        SDL_Texture* texture;
-        int width, height;
-        SDL_Rect clipRect;
-
-    public:
-        Sprite();
-
-        Sprite(const std::string& file);
-
-        Sprite(Game::GameObject& associated);
-
-        Sprite(Game::GameObject& associated, const std::string& file);
-
-        ~Sprite();
-    
-    public:
-        void Open(const std::string& file, int x, int y, int w=-1, int h=-1);
-
-        void Open(const std::string& file);
-
-        void SetClip(int x, int y, int w, int h);
-    
-    public:
-        void Update(float dt) {};
-        void Render();
-        void Render(float x, float y);
-    public:
-        int GetWidth(){ return this->width; }
-        int GetHeight(){ return this->height; }
-        bool IsOpen(){ return this->texture != nullptr; }
-    
-    public:
-        bool Is(const std::string& type) { return type == "Sprite"; }
-    };
-
-///////////////////////////////////////////// Game GameObject Class //////////////////////////////////////////
-
-    class GameObject
-    {
-    private:
-        std::vector<Game::Component*> components;
-        bool isDead;
-    
-    public:
-        Game::Rect box;
-
-    public:
-        GameObject();
-        ~GameObject();
-
-    public:
-        void Update(float dt);
-        void Render();
-    
-    public:
-        bool IsDead() { return this->isDead; }
-    
-    public:
-        void RequestDelete() { this->isDead = true;}
-        
-        void AddComponent(Game::Component* cpt) 
-        { this->components.push_back(cpt); }
-        
-        void AddComponents(std::initializer_list<Game::Component*> cpts);
-        void RemoveComponent(Game::Component* cpt);
-        Game::Component* GetComponent(const std::string& type);
-    };
-
-//////////////////////////////////////////// Game State Class /////////////////////////////////////////////////
-
-    class State
-    {
-    private:
-        Game::GameObject bg;
-        std::vector<std::unique_ptr<Game::GameObject>> objectArray;
-        bool quitRequested;
-    
-    public:
-        State();
-        ~State();
-    
-    public:
-        void Update(float dt);
-        void Render();
-    
-    public:
-        void LoadAssets();
-        bool QuitRequested() { return this->quitRequested; }
-    
-    public:
-        void Input();
-        void AddObject(int mouseX, int mouseY);
-    };
-
-////////////////////////////////////////////// Game Face Class ////////////////////////////////////////////////////
-
-    class Face : public Game::Component
-    {
-    private:
-        int hitpoints;
-    
-    public:
-        Face() {}
-        Face(Game::GameObject& associated) : Component(associated) 
-        { this->hitpoints = 30; }
-        ~Face() {}
-    public:
-        void Damage(int damage);
-        void Death();
-    public:
-        void Update(float dt);
-        void Render();
-    
-    public:
-        bool Is(const std::string& type) { return type == "Face";}
-    };
-////////////////////////////////////////////// Game TileSet Class /////////////////////////////////////////////////
-
-    class TileSet
-    {
-    private:
-        Game::Sprite tileSet;
-        int rows, columns;
-        int tileWidth, tileHeight;
-    
-    public:
-        TileSet(int tileWidth, int tileHeight, const std::string& file);
-        void RenderTile(unsigned index, float x, float y);
-
-        int GetTileWidth() { return this->tileWidth; }
-        int GetTileHeight() { return this->tileHeight; }
-        int GetTileNumber() { return this->tileWidth*this->tileHeight; }
-        int GetRows() { return this->rows; }
-        int GetColumns() { return this->columns; }
-    };
-
-////////////////////////////////////////////// Game Class TileMap /////////////////////////////////////////////////
-
-    class TileMap : public Game::Component
-    {
-    private:
-        std::vector<int> tileMatrix;
-        Game::TileSet* tileSet;
-        int mapWidth, mapHeight, mapDepth;
-
-    public:
-        TileMap() : Component() { this->tileSet = nullptr; }
-        TileMap(Game::GameObject& associated, const std::string& file, Game::TileSet* tileSet);
-        
-        ~TileMap() 
-        {
-            if(this->tileSet)
-                delete this->tileSet;
-        }
-
-    public:    
-        void Load(const std::string& file);
-        void SetTileSet(Game::TileSet* tileSet)
-        { this->tileSet = tileSet; }
-
-        int AtIdx(int x, int y, int z = 0)
-        { return this->mapWidth*(z*this->mapHeight + y) + x; }
-        
-        int& At(int x, int y, int z = 0)
-        { return this->tileMatrix[this->mapWidth*(z*this->mapHeight + y) + x]; }
-    
-    public:
-        void Render();
-        void RenderLayer(int layer, const Game::Rect& toRender, const Game::Rect& tSetC);
-        void Update(float dt) {}
-    
-    public:
-        bool Is(const std::string& type) { return type == "TileMap"; }
-    
-    public:
-        int GetWidth() { return this->mapWidth; }
-        int GetHeight() { return this->mapHeight; }
-        int GetDepth() { return this->mapDepth; }
-        int GetPWidth() { return this->mapWidth*tileSet->GetTileWidth(); }
-        int GetPHeight() { return this->mapHeight*tileSet->GetTileHeight(); }
-    
-    public:
-        Game::Rect adapt(const Game::Rect& tSetC);
-        Game::Rect tileCord(Game::Rect& tSetC);
-    };
-
-    class Resources
-    {
-    private:
-        static std::unordered_map<std::string, SDL_Texture*> imageTable;
-        static std::unordered_map<std::string, Mix_Music*> musicTable;
-        static std::unordered_map<std::string, Mix_Chunk*> soundTable;
-    
-    public:
-        static SDL_Texture* GetImage(const std::string&  file);
-        static Mix_Music* GetMusic(const std::string&  file);
-        static Mix_Chunk* GetSound(const std::string&  file);
-    
-    public:
-        static void ClearImages();
-        static void ClearMusics();
-        static void ClearSounds();
-    };
-
 ////////////////////////////////////////////// Game Attributes ////////////////////////////////////////////////////
 
 private:
@@ -427,7 +68,8 @@ private:
 private:
     int fps;
     float period;
-    unsigned long long initialTick, lastTick, currTick;
+    int frameStart;
+    float dt;
 
 public:
     static void ThrowException()
@@ -452,6 +94,9 @@ public:
     static Game& GetInstance(const char* Title = "Titulo", int width = 600, int height = 480);
 
 public:
+    void CalculateDeltaTime();
+    float GetDeltaTime() { return this->dt; }
+public:
     int GetWidth() { return this->WindowWidth; }
     int GetHeight() { return this->WindowHeight; }
 
@@ -459,127 +104,575 @@ public:
     void Run();
 };
 
+///////////////////////////////////////////// Game Vector Class //////////////////////////////////////////////
+
+class Vec2
+{
+public:
+    float x, y;
+
+public:
+    Vec2(float x = 0.0f, float y = 0.0f);
+    Vec2(const Vec2& vec);
+
+public:
+    void sum(const Vec2& vec);
+    void sub(const Vec2& vec);
+    void mulc(const float scalar);
+    void divc(const float scalar);
+    float mag();
+    Vec2 norm();
+    float dist(const Vec2& vec);
+    float theta();
+    float theta(const Vec2& vec);
+    Vec2& Rotate(float angle);
+
+public:
+    static Vec2 sum(const Vec2& vecl, const Vec2& vecr);
+    static Vec2 sub(const Vec2& vecl, const Vec2& vecr);
+    static Vec2 mulc(const Vec2& vec, const float scalar);
+    static Vec2 divc(const Vec2& vec, const float scalar);
+    static float mag(const Vec2& vec);
+    static Vec2 norm(const Vec2& vec);
+    static float dist(const Vec2& vecl, const Vec2& vecr);
+    static float theta1(const Vec2& vec);
+    static float theta(const Vec2& vecl, const Vec2& vecr);
+    static Vec2& Rotate(Vec2 vec,float angle)
+    { return Vec2(vec).Rotate(angle); }
+
+public:
+    Vec2 operator+(const Vec2& vec) { return Vec2::sum(*this,vec); }
+    Vec2 operator-(const Vec2& vec) { return Vec2::sub(*this,vec); }
+    Vec2 operator*(const float scalar) { return Vec2::mulc(*this,scalar); }
+    Vec2 operator/(const float scalar) { return Vec2::divc(*this, scalar); }
+
+    Vec2& operator+=(const Vec2& vec) { this->sum(vec); return *this; }
+    Vec2& operator-=(const Vec2& vec) { this->sub(vec); return *this; }
+    Vec2& operator*=(const float scalar) { this->mulc(scalar); return *this; }
+    Vec2& operator/=(const float scalar) { this->divc(scalar); return *this; }
+};
+
+///////////////////////////////////////////// Game Rect Class ////////////////////////////////////////////////
+
+class Rect 
+{
+public:
+    float x, y, w, h;
+
+public:
+    Rect(float x = 0.0f, float y = 0.0f, float w = 0.0f, float h = 0.0f);
+    Rect(const Rect& rect) { Rect(rect.x,rect.y,rect.w,rect.h); }
+
+public:
+    Vec2 center();
+    float centerDist(const Rect& rect);
+    bool in(const Vec2& vec);
+
+public:
+    Vec2 center(const Rect& rect) { return Rect(rect).center();}
+    
+    float centerDist(const Rect& rectl, const Rect& rectr)
+    { return Rect(rectl).center().dist(Rect(rectr).center()); }
+
+    bool in(const Rect& rect, const Vec2& vec)
+    { return Rect(rect).in(vec); }
+
+    bool intersect(const Rect& rect)
+    {
+        return in(Vec2(rect.x, rect.y)) ||
+                in(Vec2(rect.x + rect.w, rect.y)) ||
+                in(Vec2(rect.x, rect.y + rect.h)) ||
+                in(Vec2(rect.x + rect.w, rect.y + rect.h));
+    }
+
+    Rect intersection(const Rect& rect);
+
+public:
+    Rect& operator=(const Rect& rect)
+    { this->x = rect.x; this->y = rect.y; this->w = rect.w; this->h = rect.h; return *this;}
+public:
+    Rect copy() { return {this->x, this->y, this->w, this->h}; }
+};
+
+///////////////////////////////////////////// Game Component Class ///////////////////////////////////////////
+
+class Component
+{
+protected:
+    GameObject& associated;
+
+public:
+    Component() : associated(*(GameObject*)nullptr) { }
+    Component(GameObject& associated): associated(associated) { }
+    virtual ~Component() {};
+
+public:
+    virtual void Update(float dt) = 0;
+    virtual void Render() = 0;
+
+public:
+    virtual bool Is(const std::string& type) = 0;
+};
+
+///////////////////////////////////////////// Game Sound Class ///////////////////////////////////////////////
+
+class Sound : public Component
+{
+private:
+    Mix_Chunk* chunk;
+    int channel;
+
+public:
+    Sound() : Component() {}
+    Sound(GameObject& associated) : Component(associated) 
+    { this->chunk = nullptr; this->channel = -1; }
+    Sound(GameObject& associated, const std::string& file);
+    ~Sound() { this->chunk = nullptr; }
+
+public:
+    void Play(int times = 0);
+    void Stop();
+
+public:
+    void Open(const std::string& file);
+    bool IsOpen() { return this->chunk != nullptr; }
+
+public:
+    void Update(float dt);
+    void Render();
+
+public:
+    bool Is(const std::string& type) { return type == "Sound"; }
+
+};
+
+///////////////////////////////////////////// Game Music Class ///////////////////////////////////////////////
+
+class Music : public Component
+{
+private:
+    Mix_Music* music;
+public:
+    Music() : Component() { this->music = nullptr; }
+    Music(GameObject& associated, const std::string& file);
+    ~Music();
+public:
+    void Play(int times = -1);
+    void Stop(int msToStop = 1500);
+    void Open(const std::string& file);
+public:
+    
+    void Update(float dt) {}
+    void Render() { Play(); }
+public:
+    bool IsOpen() { return this->music != nullptr; }
+public:
+    bool Is(const std::string& type) { return type == "Music";}
+};
+
+///////////////////////////////////////////// Game Sprite Class //////////////////////////////////////////////
+
+class Sprite : public Component
+{
+private:
+    SDL_Texture* texture;
+    int width, height;
+    SDL_Rect clipRect;
+
+public:
+    Sprite();
+
+    Sprite(const std::string& file);
+
+    Sprite(GameObject& associated);
+
+    Sprite(GameObject& associated, const std::string& file);
+
+    ~Sprite();
+
+public:
+    void Open(const std::string& file, int x, int y, int w=-1, int h=-1);
+
+    void Open(const std::string& file);
+
+    void SetClip(int x, int y, int w, int h);
+
+public:
+    void Update(float dt) {};
+    void Render();
+    void Render(float x, float y);
+    void Render(Rect& toPrint);
+
+public:
+    int GetWidth(){ return this->width; }
+    int GetHeight(){ return this->height; }
+    bool IsOpen(){ return this->texture != nullptr; }
+
+public:
+    bool Is(const std::string& type) { return type == "Sprite"; }
+};
+
+///////////////////////////////////////////// Game GameObject Class //////////////////////////////////////////
+
+class GameObject
+{
+private:
+    std::vector<Component*> components;
+    bool isDead;
+
+public:
+    Rect box;
+
+public:
+    GameObject();
+    ~GameObject();
+
+public:
+    void Update(float dt);
+    void Render();
+
+public:
+    bool IsDead() { return this->isDead; }
+
+public:
+    void RequestDelete() { this->isDead = true;}
+    
+    void AddComponent(Component* cpt) 
+    { this->components.push_back(cpt); }
+    
+    void AddComponents(std::initializer_list<Component*> cpts);
+    void RemoveComponent(Component* cpt);
+    Component* GetComponent(const std::string& type);
+};
+
+//////////////////////////////////////////// Game State Class /////////////////////////////////////////////////
+
+class State
+{
+private:
+    GameObject bg;
+    std::vector<std::unique_ptr<GameObject>> objectArray;
+    bool quitRequested;
+
+public:
+    State();
+    ~State();
+
+public:
+    void Update(float dt);
+    void Render();
+
+public:
+    void LoadAssets();
+    bool QuitRequested() { return this->quitRequested; }
+
+public:
+    void AddObject(int mouseX, int mouseY);
+};
+
+////////////////////////////////////////////// Game Face Class ////////////////////////////////////////////////////
+
+class Face : public Component
+{
+private:
+    int hitpoints;
+
+public:
+    Face() {}
+    Face(GameObject& associated) : Component(associated) 
+    { this->hitpoints = 30;  }
+    ~Face() { }
+public:
+    void Damage(int damage);
+    void Death();
+public:
+    void Update(float dt);
+    void Render();
+
+public:
+    bool Is(const std::string& type) { return type == "Face";}
+};
+////////////////////////////////////////////// Game TileSet Class /////////////////////////////////////////////////
+
+class TileSet
+{
+private:
+    Sprite tileSet;
+    int rows, columns;
+    int tileWidth, tileHeight;
+
+public:
+    TileSet(int tileWidth, int tileHeight, const std::string& file);
+    void RenderTile(unsigned index, float x, float y);
+
+    int GetTileWidth() { return this->tileWidth; }
+    int GetTileHeight() { return this->tileHeight; }
+    int GetTileNumber() { return this->tileWidth*this->tileHeight; }
+    int GetRows() { return this->rows; }
+    int GetColumns() { return this->columns; }
+};
+
+////////////////////////////////////////////// Game Class TileMap /////////////////////////////////////////////////
+
+class TileMap : public Component
+{
+private:
+    std::vector<int> tileMatrix;
+    TileSet* tileSet;
+    int mapWidth, mapHeight, mapDepth;
+
+public:
+    TileMap() : Component() { this->tileSet = nullptr; }
+    TileMap(GameObject& associated, const std::string& file, TileSet* tileSet);
+    
+    ~TileMap() 
+    {
+        if(this->tileSet)
+            delete this->tileSet;
+    }
+
+public:    
+    void Load(const std::string& file);
+    void SetTileSet(TileSet* tileSet)
+    { this->tileSet = tileSet; }
+
+    int AtIdx(int x, int y, int z = 0)
+    { return this->mapWidth*(z*this->mapHeight + y) + x; }
+    
+    int& At(int x, int y, int z = 0)
+    { return this->tileMatrix[this->mapWidth*(z*this->mapHeight + y) + x]; }
+
+public:
+    void Render();
+    void RenderLayer(int layer, const Rect& toRender, const Rect& tSetC);
+    void Update(float dt) {}
+
+public:
+    bool Is(const std::string& type) { return type == "TileMap"; }
+
+public:
+    int GetWidth() { return this->mapWidth; }
+    int GetHeight() { return this->mapHeight; }
+    int GetDepth() { return this->mapDepth; }
+    int GetPWidth() { return this->mapWidth*tileSet->GetTileWidth(); }
+    int GetPHeight() { return this->mapHeight*tileSet->GetTileHeight(); }
+
+public:
+    Rect adapt(const Rect& tSetC);
+    Rect tileCord(Rect& tSetC);
+};
+
+class Resources
+{
+private:
+    static std::unordered_map<std::string, SDL_Texture*> imageTable;
+    static std::unordered_map<std::string, Mix_Music*> musicTable;
+    static std::unordered_map<std::string, Mix_Chunk*> soundTable;
+
+public:
+    static SDL_Texture* GetImage(const std::string&  file);
+    static Mix_Music* GetMusic(const std::string&  file);
+    static Mix_Chunk* GetSound(const std::string&  file);
+
+public:
+    static void ClearImages();
+    static void ClearMusics();
+    static void ClearSounds();
+};
+
+//////////////////////////////////////////////////////// Game InputManager class ///////////////////////////////////////////////////////////
+
+class InputManager
+{
+private:
+    bool mouseState[6];
+    int mouseUpdate[6];
+    bool quitRequested;
+    int updateCounter;
+    int mouseX, mouseY;
+    std::unordered_map<int,bool> keyState;
+    std::unordered_map<int,int> keyUpdate;
+
+private:
+    InputManager();
+    ~InputManager() {}
+
+public:
+    void Update();
+
+//////////////////////////TO-DO Criar enum Game::Key.
+public:
+    bool KeyPress(int key) { return this->keyState[key] && (this->keyUpdate[key] == this->updateCounter); }
+    bool KeyRelease(int key) { return !this->keyState[key] && (this->keyUpdate[key] == this->updateCounter); }
+    bool IsKeyDown(int key) { return this->keyState[key]; }
+
+    bool MousePress(int key) { return this->mouseState[key] && (this->mouseUpdate[key] == this->updateCounter); }
+    bool MouseRelease(int key) { return !this->mouseState[key] && (this->mouseUpdate[key] == this->updateCounter); }
+    bool IsMouseDown(int key) { return this->mouseState[key]; }
+
+public:
+    static InputManager& GetInstance()
+    { static InputManager Meyer; return Meyer;}
+
+    int GetMouseX() { return this->mouseX; }
+    int GetMouseY() { return this->mouseY; }
+    bool QuitRequested() { return this->quitRequested; }
+};
+
+//////////////////////////////////////////////////////////////////// Game Camera class //////////////////////////////////////////////////////////////
+
+class Camera
+{
+private:
+    static GameObject* focus;
+
+public:
+    static Vec2 pos, speed;
+
+public:
+    static void Follow(GameObject* newFocus) { Camera::focus = newFocus; }
+    static void Unfollow() { Camera::focus = nullptr; }
+
+public:
+    static void Update(float dt);
+};
+
+////////////////////////////////////////////////////////////////// Game CameraFollower Class ///////////////////////////////////////////////////////
+
+class CameraFollower : public Component
+{
+public:
+    CameraFollower(GameObject& go) : Component(go) {}
+
+public:
+    void Update(float dt);
+    void Render() {}
+
+public:
+    bool Is(const std::string& type) { return type == "CameraFollower"; }
+};
+
 //////////////////////////////////////// Game Vec2 Functions ///////////////////////////////////////////////
 
-Game::Vec2::Vec2(float x, float y)
+Vec2::Vec2(float x, float y)
 {
     this->x = x;
     this->y = y;
 }
 
-Game::Vec2::Vec2(const Game::Vec2& vec)
+Vec2::Vec2(const Vec2& vec)
 {
     this->x = vec.x;
     this->y = vec.y;
 }
 
-void Game::Vec2::sum(const Game::Vec2& vec)
+void Vec2::sum(const Vec2& vec)
 {
     this->x += vec.x;
     this->y += vec.y;
 }
 
-void Game::Vec2::sub(const Game::Vec2& vec)
+void Vec2::sub(const Vec2& vec)
 {
     this->x -= vec.x;
     this->y -= vec.y;
 }
 
-void Game::Vec2::mulc(const float scalar)
+void Vec2::mulc(const float scalar)
 {
     this->x *= scalar;
     this->y *= scalar;
 }
 
-void Game::Vec2::divc(const float scalar)
+void Vec2::divc(const float scalar)
 {
     this->x /= scalar;
     this->y /= scalar;
 }
 
-float Game::Vec2::mag()
+float Vec2::mag()
 {
     return sqrt(this->x*this->x + this->y*this->y);
 }
 
-Game::Vec2 Game::Vec2::norm()
+Vec2 Vec2::norm()
 {
-    Game::Vec2 vec(this->x, this->y);
+    Vec2 vec(this->x, this->y);
     vec.divc(vec.mag());
     return vec;
 }
 
-float Game::Vec2::dist(const Game::Vec2& vec)
+float Vec2::dist(const Vec2& vec)
 {
     const float xl = this->x - vec.x;
     const float yl = this->y - vec.y;
     return sqrt(xl*xl + yl*yl);
 }
 
-float Game::Vec2::theta()
+float Vec2::theta()
 {
     return atan2(this->y, this->x);
 }
 
-float Game::Vec2::theta(const Game::Vec2& vec)
+float Vec2::theta(const Vec2& vec)
 {
-    return Game::Vec2::sub(*this, vec).theta();
+    return Vec2::sub(*this, vec).theta();
 }
 
-Game::Vec2 Game::Vec2::sum(const Game::Vec2& vecl, const Game::Vec2& vecr)
+Vec2 Vec2::sum(const Vec2& vecl, const Vec2& vecr)
 {
-    Game::Vec2 rvec(vecl);
+    Vec2 rvec(vecl);
     rvec.sum(vecr);
     return rvec;
 }
 
-Game::Vec2 Game::Vec2::sub(const Game::Vec2& vecl, const Game::Vec2& vecr)
+Vec2 Vec2::sub(const Vec2& vecl, const Vec2& vecr)
 {
-    Game::Vec2 rvec(vecl);
+    Vec2 rvec(vecl);
     rvec.sub(vecr);
     return rvec;
 }
 
-Game::Vec2 Game::Vec2::mulc(const Game::Vec2& vec, const float scalar)
+Vec2 Vec2::mulc(const Vec2& vec, const float scalar)
 {
-    Game::Vec2 rvec(vec);
+    Vec2 rvec(vec);
     rvec.mulc(scalar);
     return rvec;
 }
 
-Game::Vec2 Game::Vec2::divc(const Game::Vec2& vec, const float scalar)
+Vec2 Vec2::divc(const Vec2& vec, const float scalar)
 {
-    Game::Vec2 rvec(vec);
+    Vec2 rvec(vec);
     rvec.divc(scalar);
     return rvec;
 }
 
-float Game::Vec2::mag(const Game::Vec2& vec)
+float Vec2::mag(const Vec2& vec)
 {
-    return Game::Vec2(vec).mag();
+    return Vec2(vec).mag();
 }
 
-Game::Vec2 Game::Vec2::norm(const Game::Vec2& vec)
+Vec2 Vec2::norm(const Vec2& vec)
 {
-    return Game::Vec2(vec).norm();
+    return Vec2(vec).norm();
 }
 
-float Game::Vec2::dist(const Game::Vec2& vecl, const Game::Vec2& vecr)
+float Vec2::dist(const Vec2& vecl, const Vec2& vecr)
 {
-    return Game::Vec2(vecl).dist(vecr);
+    return Vec2(vecl).dist(vecr);
 }
 
-float Game::Vec2::theta1(const Game::Vec2& vec)
+float Vec2::theta1(const Vec2& vec)
 {
-    return Game::Vec2(vec).theta();
+    return Vec2(vec).theta();
 }
 
-float Game::Vec2::theta(const Game::Vec2& vecl, const Game::Vec2& vecr)
+float Vec2::theta(const Vec2& vecl, const Vec2& vecr)
 {
-    return Game::Vec2::sub(vecl, vecr).theta();
+    return Vec2::sub(vecl, vecr).theta();
 }
 
-Game::Vec2& Game::Vec2::Rotate(float angle)
+Vec2& Vec2::Rotate(float angle)
 {
     const float cs = cos(angle), sn = sin(angle);
     
@@ -594,7 +687,7 @@ Game::Vec2& Game::Vec2::Rotate(float angle)
 
 ///////////////////////////////////////// Game Rect Functions ///////////////////////////////////////////////
 
-Game::Rect::Rect(float x, float y, float w, float h)
+Rect::Rect(float x, float y, float w, float h)
 {
     this->x = x;
     this->y = y;
@@ -602,23 +695,23 @@ Game::Rect::Rect(float x, float y, float w, float h)
     this->h = h;
 }
 
-Game::Vec2 Game::Rect::center()
+Vec2 Rect::center()
 {
-    return Game::Vec2(this->x + (this->w/2), this->y + (this->h/2));
+    return Vec2(this->x + (this->w/2), this->y + (this->h/2));
 }
 
-float Game::Rect::centerDist(const Game::Rect& rect)
+float Rect::centerDist(const Rect& rect)
 {
-    return abs(this->center().dist(Game::Rect(rect).center()));
+    return abs(this->center().dist(Rect(rect).center()));
 }
 
-bool Game::Rect::in(const Game::Vec2& vec)
+bool Rect::in(const Vec2& vec)
 {
     return (this->x <= vec.x && this->x + this->w >= vec.x) &&
            (this->y <= vec.y && this->y + this->h >= vec.y);
 }
 
-Game::Rect Game::Rect::intersection(const Game::Rect& rect)
+Rect Rect::intersection(const Rect& rect)
 {
     
     const float xl = std::max(rect.x, this->x);    
@@ -685,9 +778,8 @@ void Game::InitConfigs(int width, int height)
 {
     this->fps = 30;
     this->period = 1000.0f/((float)fps);
-    this->initialTick = SDL_GetTicks64();
-    this->lastTick = this->initialTick;
-    this->currTick = this->initialTick;
+    this->frameStart = SDL_GetTicks();
+    this->dt = 0.0f;
 
     this->WindowHeight = height;
     this->WindowWidth = width;
@@ -730,14 +822,22 @@ Game& Game::GetInstance(const char* Title, int width, int height)
     return *Game::instance;
 }
 
+void Game::CalculateDeltaTime()
+{
+    const int currT = SDL_GetTicks();
+    dt = (currT - frameStart)/1000.0f;
+    frameStart = currT;
+}
+
 void Game::Run()
 {
+    InputManager& controller = InputManager::GetInstance();
     while(!this->state->QuitRequested())
     {
-        const float dt = ((float)(this->currTick - this->lastTick))/100.0f;
-        this->lastTick = this->currTick;   
-        this->currTick = SDL_GetTicks64();
-        
+        CalculateDeltaTime();
+
+        controller.Update();
+
         this->state->Update(dt);
         
         this->state->Render();
@@ -746,16 +846,16 @@ void Game::Run()
         
         SDL_Delay(this->period);
     }
-    Game::Resources::ClearImages();
-    Game::Resources::ClearMusics();
-    Game::Resources::ClearSounds();
+    Resources::ClearImages();
+    Resources::ClearMusics();
+    Resources::ClearSounds();
 }
 
 ///////////////////////////////////////// Game Component Functions //////////////////////////////////////////
 
 ////////////////////////////////////////// Game Sound Functions /////////////////////////////////////////////////
 
-Game::Sound::Sound(Game::GameObject& associated, const std::string& file)
+Sound::Sound(GameObject& associated, const std::string& file)
     : Component(associated)
 {
     this->associated = associated; 
@@ -764,7 +864,7 @@ Game::Sound::Sound(Game::GameObject& associated, const std::string& file)
     Open(file);
 }
 
-void Game::Sound::Play(int times)
+void Sound::Play(int times)
 {
     if(this->channel == -1 || !Mix_Playing(this->channel))
     {
@@ -773,7 +873,7 @@ void Game::Sound::Play(int times)
     // ################################################ botar throw exception? erro na musica deveria quebrar tudo?
 }
 
-void Game::Sound::Stop()
+void Sound::Stop()
 {
     if(this->channel != -1 && this->chunk != nullptr)
     {
@@ -783,37 +883,37 @@ void Game::Sound::Stop()
     }
 }
 
-void Game::Sound::Open(const std::string& file)
+void Sound::Open(const std::string& file)
 { 
-    this->chunk = Game::Resources::GetSound(file);
+    this->chunk = Resources::GetSound(file);
 }
 
-void Game::Sound::Update(float dt)
+void Sound::Update(float dt)
 { }
 
-void Game::Sound::Render()
+void Sound::Render()
 { }
 
 ////////////////////////////////////////// Game Music Functions ////////////////////////////////////////////////
 
-Game::Music::Music(Game::GameObject& associated, const std::string& file)
+Music::Music(GameObject& associated, const std::string& file)
     : Component(associated)
 {
     Open(file);
 }
 
-Game::Music::~Music()
+Music::~Music()
 {
     if(this->music)
         Stop();
 }
 
-void Game::Music::Open(const std::string& file)
+void Music::Open(const std::string& file)
 {
-    this->music = Game::Resources::GetMusic(file);
+    this->music = Resources::GetMusic(file);
 }
 
-void Game::Music::Play(int times)
+void Music::Play(int times)
 {
     if(!this->music)
         Game::ThrowException();
@@ -821,7 +921,7 @@ void Game::Music::Play(int times)
         Mix_PlayMusic(this->music, times);
 }
 
-void Game::Music::Stop(int msToStop)
+void Music::Stop(int msToStop)
 {
     Mix_FadeOutMusic(msToStop);
 }
@@ -829,7 +929,7 @@ void Game::Music::Stop(int msToStop)
 
 ///////////////////////////////////////////////// Game Sprites ///////////////////////////////////////////////
 
-Game::Sprite::Sprite() : Component()
+Sprite::Sprite() : Component()
 {
     this->texture = nullptr;
     this->width = 0;
@@ -837,7 +937,7 @@ Game::Sprite::Sprite() : Component()
     this->clipRect = {0, 0, 0, 0};
 }
 
-Game::Sprite::Sprite(Game::GameObject& associated, const std::string& file)
+Sprite::Sprite(GameObject& associated, const std::string& file)
  : Component(associated)
 {
     this->texture = nullptr;
@@ -847,13 +947,13 @@ Game::Sprite::Sprite(Game::GameObject& associated, const std::string& file)
     Open(file);
 }
 
-Game::Sprite::~Sprite()
+Sprite::~Sprite()
 {
     if(this->texture)
         this->texture = nullptr;
 }
 
-void Game::Sprite::Open(const std::string& file, int x, int y, int w, int h)
+void Sprite::Open(const std::string& file, int x, int y, int w, int h)
 {
     Open(file);
     
@@ -863,9 +963,9 @@ void Game::Sprite::Open(const std::string& file, int x, int y, int w, int h)
     SetClip(x,y,w,h);
 }
 
-void Game::Sprite::Open(const std::string& file)
+void Sprite::Open(const std::string& file)
 {
-    this->texture = Game::Resources::GetImage(file);
+    this->texture = Resources::GetImage(file);
 
     if(this->texture == nullptr)
         Game::ThrowException();
@@ -874,28 +974,30 @@ void Game::Sprite::Open(const std::string& file)
     SetClip(0,0,this->width, this->height);
 }
 
-void Game::Sprite::SetClip(int x, int y, int w, int h)
+void Sprite::SetClip(int x, int y, int w, int h)
 {
     this->clipRect = {
         x, y, w, h
     };
 }
 
-void Game::Sprite::Render()
+void Sprite::Render()
 {
     SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
-    const Game::Rect& wrp = this->associated.box;
+    const Vec2 cPos = Camera::pos;
+    const Rect& wrp = this->associated.box;
+    
     SDL_Rect dst = {
-        (int)wrp.x,
-        (int)wrp.y,
+        (int)(wrp.x - cPos.x),
+        (int)(wrp.y - cPos.y),
         (int)wrp.w,
         (int)wrp.h
     };
-    
+
     SDL_RenderCopy(renderer, this->texture, &this->clipRect, &dst);
 }
 
-void Game::Sprite::Render(float x, float y)
+void Sprite::Render(float x, float y)
 {
     SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
     
@@ -909,18 +1011,17 @@ void Game::Sprite::Render(float x, float y)
     SDL_RenderCopy(renderer, this->texture, &this->clipRect, &dst);
 }
 
-
 ///////////////////////////////////////// Game GameObject Functions /////////////////////////////////////////
 
 
-Game::GameObject::GameObject()
+GameObject::GameObject()
 {
     this->isDead = false;
 }
 
-Game::GameObject::~GameObject()
+GameObject::~GameObject()
 {
-    for(std::vector<Game::Component*>::iterator it = this->components.begin(); 
+    for(std::vector<Component*>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         delete (*it);
@@ -928,27 +1029,28 @@ Game::GameObject::~GameObject()
     this->components.clear();
 }
     
-void Game::GameObject::Update(float dt)
+void GameObject::Update(float dt)
 {
-    for(std::vector<Game::Component*>::iterator it = this->components.begin(); 
+    for(std::vector<Component*>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
-    {
         (*it)->Update(dt);
-    }
+    
 }
 
-void Game::GameObject::Render()
+void GameObject::Render()
 {
-    for(std::vector<Game::Component*>::iterator it = this->components.begin(); 
+    Game& gref = Game::GetInstance();
+    
+    for(std::vector<Component*>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         (*it)->Render();
     }
 }
 
-void Game::GameObject::RemoveComponent(Game::Component* cpt)
+void GameObject::RemoveComponent(Component* cpt)
 {
-    for(std::vector<Game::Component*>::iterator it = this->components.begin(); 
+    for(std::vector<Component*>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         if(cpt == *it)
@@ -959,16 +1061,16 @@ void Game::GameObject::RemoveComponent(Game::Component* cpt)
     }
 }
 
-void Game::GameObject::AddComponents(std::initializer_list<Game::Component*> cpts)
+void GameObject::AddComponents(std::initializer_list<Component*> cpts)
 {
-    for(std::initializer_list<Game::Component*>::iterator it = cpts.begin();
+    for(std::initializer_list<Component*>::iterator it = cpts.begin();
                 it != cpts.end(); ++it)
         this->components.push_back(*it);
 }
 
-Game::Component* Game::GameObject::GetComponent(const std::string& type)
+Component* GameObject::GetComponent(const std::string& type)
 {
-    for(std::vector<Game::Component*>::iterator it = this->components.begin(); 
+    for(std::vector<Component*>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         if((*it)->Is(type))
@@ -980,26 +1082,27 @@ Game::Component* Game::GameObject::GetComponent(const std::string& type)
 
 //////////////////////////////////////////////// Game State Functions /////////////////////////////////////////////////
 
-Game::State::State() 
+State::State() 
 {
     this->quitRequested = false;
     LoadAssets();
 }
 
-Game::State::~State()
+State::~State()
 {
     this->objectArray.clear();
 }
 
-void Game::State::LoadAssets()
+void State::LoadAssets()
 {
     Game& inst = Game::GetInstance();
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
-    // Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
-    
+    Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
+
     this->bg.AddComponents({
         spr,
-    //    msc,
+        msc,
+        new CameraFollower(this->bg)
     });
     
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
@@ -1014,19 +1117,26 @@ void Game::State::LoadAssets()
     go->box = { 0, 0, (float)map->GetPWidth(), (float)map->GetPHeight() };
     
     go->AddComponent(map);
-    this->objectArray.push_back(std::unique_ptr<Game::GameObject>(go));
+    this->objectArray.push_back(std::unique_ptr<GameObject>(go));
 }
 
-void Game::State::Update(float dt)
-{
-    this->Input();
+void State::Update(float dt)
+{   
+    InputManager& controller = InputManager::GetInstance();
     
-    if(SDL_QuitRequested())
+    if(SDL_QuitRequested() || controller.QuitRequested())
     {
         this->quitRequested = true;
         return;
     }
 
+    Camera::Update(dt);
+    const Vec2 cPos = Camera::pos;
+
+    if(controller.KeyPress(SPACEBAR_KEY))
+        this->AddObject(controller.GetMouseX(), controller.GetMouseY());
+
+    
     int vSize = this->objectArray.size();
     
     for(int i = 0; i < vSize; i++)
@@ -1038,96 +1148,44 @@ void Game::State::Update(float dt)
             i--;
         }
     }
+
+    this->bg.Update(dt);
+    
+    vSize = this->objectArray.size();
+    
+    for(int i = 0; i < vSize; i++)
+        this->objectArray[i]->Update(dt);
+    
 }
 
-void Game::State::Render()
+void State::Render()
 {
     if(this->quitRequested)
         return;
 
     this->bg.Render();
-    for(std::vector<std::unique_ptr<Game::GameObject>>::iterator it = this->objectArray.begin();
+    for(std::vector<std::unique_ptr<GameObject>>::iterator it = this->objectArray.begin();
             it != this->objectArray.end(); ++it)
         (*it)->Render();
 }
 
-void Game::State::Input() {
-	SDL_Event event;
-	int mouseX, mouseY;
-
-	// Obtenha as coordenadas do mouse
-	SDL_GetMouseState(&mouseX, &mouseY);
-
-	// SDL_PollEvent retorna 1 se encontrar eventos, zero caso contrário
-	while (SDL_PollEvent(&event)) 
-    {
-
-		// Se o evento for quit, setar a flag para terminação
-		if(event.type == SDL_QUIT) 
-        {
-			this->quitRequested = true;
-		}
-		
-		// Se o evento for clique...
-		if(event.type == SDL_MOUSEBUTTONDOWN) 
-        {
-
-			// Percorrer de trás pra frente pra sempre clicar no objeto mais de cima
-			for(int i = this->objectArray.size() - 1; i >= 0; --i) 
-            {
-				// Obtem o ponteiro e casta pra Face.
-				GameObject* go = (GameObject*) this->objectArray[i].get();
-				// Nota: Desencapsular o ponteiro é algo que devemos evitar ao máximo.
-				// O propósito do unique_ptr é manter apenas uma cópia daquele ponteiro,
-				// ao usar get(), violamos esse princípio e estamos menos seguros.
-				// Esse código, assim como a classe Face, é provisório. Futuramente, para
-				// chamar funções de GameObjects, use objectArray[i]->função() direto.
-
-				if(go->box.in( {(float)mouseX, (float)mouseY} ) ) 
-                {
-					Face* face = (Face*)go->GetComponent( "Face" );
-					if(face) 
-                    {
-						// Aplica dano
-						face->Damage(std::rand() % 10 + 10);
-						// Sai do loop (só queremos acertar um)
-						break;
-					}
-				}
-			}
-		}
-		if( event.type == SDL_KEYDOWN ) 
-        {
-			// Se a tecla for ESC, setar a flag de quit
-			if( event.key.keysym.sym == SDLK_ESCAPE ) 
-            {
-				this->quitRequested = true;
-			}
-			// Se não, crie um objeto
-			else 
-            {
-                Game::Vec2 objPos = Game::Vec2( 200, 0 ).Rotate( -M_PI + M_PI*(rand() % 1001)/500.0 ) + Game::Vec2( mouseX, mouseY );
-				AddObject((int)objPos.x, (int)objPos.y);
-			}
-		}
-	}
-}
-
 //////////////// to-do: box, unique_ptr em GameObject.
-void Game::State::AddObject(int mouseX, int mouseY)
+void State::AddObject(int mouseX, int mouseY)
 {
     Game& gref = Game::GetInstance(); 
 
-    this->objectArray.push_back(std::unique_ptr<Game::GameObject>(new Game::GameObject()));
+    this->objectArray.push_back(std::unique_ptr<GameObject>(new GameObject()));
     const int vSize = this->objectArray.size() - 1;
     
-    Game::Sprite* spr = new Sprite(*this->objectArray[vSize], "resources/img/penguinface.png");
+    Sprite* spr = new Sprite(*this->objectArray[vSize], "resources/img/penguinface.png");
     
-    const float windowWidth = gref.GetWidth(), windowHeight = gref.GetHeight();
+    const Vec2 cPos = Camera::pos;
     const float cW = spr->GetWidth(), cH = spr->GetHeight();
     
-    const float cX = mouseX < 0 ? 0 : (mouseX > windowWidth - cW ? windowWidth - cW : mouseX);
-    const float cY = mouseY < 0 ? 0 : (mouseY > windowHeight - cH ? windowHeight - cH : mouseY);
+    Vec2 objPos = Vec2( 200, 0 ).Rotate( -M_PI + M_PI*(rand() % 1001)/500.0 ) + Vec2( mouseX, mouseY );
+
+    const float cX = objPos.x + cPos.x < 0 ? 0 : objPos.x + cPos.x;
+    const float cY = objPos.y + cPos.y < 0 ? 0 : objPos.y + cPos.y;
    
     this->objectArray[vSize]->box = {
         cX,
@@ -1146,7 +1204,7 @@ void Game::State::AddObject(int mouseX, int mouseY)
 //////////////////////////////////////////////// Game Face Functions ///////////////////////////////////////////
 
 
-void Game::Face::Damage(int damage)
+void Face::Damage(int damage)
 {
     this->hitpoints -= damage;
     
@@ -1154,21 +1212,31 @@ void Game::Face::Damage(int damage)
         Death();    
 }
 
-void Game::Face::Death()
+void Face::Death()
 {
-    Game::Sound* sptr = ((Game::Sound*)this->associated.GetComponent("Sound"));
+    Sound* sptr = ((Sound*)this->associated.GetComponent("Sound"));
     if(sptr)
         sptr->Play();
     this->associated.RequestDelete();
 }
 
-void Game::Face::Update(float dt) {}
+void Face::Update(float dt) 
+{
+    InputManager& controller = InputManager::GetInstance();
+    const Vec2 cPos = Camera::pos;
 
-void Game::Face::Render() {}
+    if(controller.MousePress(LEFT_MOUSE_BUTTON) && 
+        this->associated.box.in(Vec2(controller.GetMouseX() + cPos.x, controller.GetMouseY() + cPos.y)))
+    {
+        Damage(30);
+    }
+}
+
+void Face::Render() {}
 
 ///////////////////////////////////// Game TileSet Functions ////////////////////////////
 
-Game::TileSet::TileSet(int tileWidth, int tileHeight, const std::string& file)
+TileSet::TileSet(int tileWidth, int tileHeight, const std::string& file)
 {
     this->tileWidth = tileWidth;
     this->tileHeight = tileHeight;
@@ -1178,7 +1246,7 @@ Game::TileSet::TileSet(int tileWidth, int tileHeight, const std::string& file)
     this->columns = this->tileSet.GetWidth()/this->tileWidth;
 }
 
-void Game::TileSet::RenderTile(unsigned index, float x, float y)
+void TileSet::RenderTile(unsigned index, float x, float y)
 {
     if(index >= 0 && index < this->GetTileNumber())
     {
@@ -1201,15 +1269,15 @@ void Game::TileSet::RenderTile(unsigned index, float x, float y)
 
 ////////////////////////////////////////// Game TileMap functions ////////////////////////////////
 
-Game::TileMap::TileMap(Game::GameObject& associated, 
-            const std::string& file, Game::TileSet* tileSet)
+TileMap::TileMap(GameObject& associated, 
+            const std::string& file, TileSet* tileSet)
     : Component(associated)
 {
     Load(file);
     SetTileSet(tileSet);
 }
     
-void Game::TileMap::Load(const std::string& file)
+void TileMap::Load(const std::string& file)
 {
     FILE* fl = fopen(file.c_str(), "r");
     
@@ -1227,7 +1295,7 @@ void Game::TileMap::Load(const std::string& file)
     } 
 }
 
-Game::Rect Game::TileMap::adapt(const Game::Rect& tSetC)
+Rect TileMap::adapt(const Rect& tSetC)
 {
     const float tW = this->tileSet->GetTileWidth();
     const float tH = this->tileSet->GetTileHeight();
@@ -1235,13 +1303,13 @@ Game::Rect Game::TileMap::adapt(const Game::Rect& tSetC)
     const float xl = floor(tSetC.x/tW)*tW;
     const float yl = floor(tSetC.y/tH)*tH;
 
-    const float wl = ceil((tSetC.x+tSetC.w)/tW)*tW;
-    const float hl = ceil((tSetC.y+tSetC.h)/tH)*tH;
+    const float wl = ceil((tSetC.x+tSetC.w)/tW)*tW - xl;
+    const float hl = ceil((tSetC.y+tSetC.h)/tH)*tH - yl;
     
     return {xl,yl,wl,hl};
 }
 
-Game::Rect Game::TileMap::tileCord(Game::Rect& tSetC)
+Rect TileMap::tileCord(Rect& tSetC)
 {
     /*
         Retorna as coordenadas do primeiro tile a ser renderizado e tambem
@@ -1259,26 +1327,28 @@ Game::Rect Game::TileMap::tileCord(Game::Rect& tSetC)
     return {xl,yl,x2l,y2l};
 }
 
-void Game::TileMap::Render()
+void TileMap::Render()
 {
     Game& inst = Game::GetInstance();
+    const Vec2 cPos = Camera::pos;
+    int cameraX = cPos.x, cameraY = cPos.y;
 
-    int cameraX = 0, cameraY = 0;
-
-    Game::Rect gCamera = { (float)cameraX, (float)cameraY, 
+    Rect gCamera = { (float)cameraX, (float)cameraY, 
                            (float)inst.GetWidth(), (float)inst.GetHeight() };
 
     if(!this->associated.box.intersect(gCamera))
         return;
     
-    Game::Rect toRender = adapt(gCamera.intersection(this->associated.box.copy()));
-    Game::Rect tSetC = tileCord(toRender);
+    Rect toRender = adapt(gCamera.intersection(this->associated.box.copy()));
+    Rect tSetC = tileCord(toRender);
+    
+    toRender.x -= cameraX; toRender.y -= cameraY;
     
     for(int i = 0; i < this->mapDepth; i++)
         RenderLayer(i, toRender, tSetC);
 }
 
-void Game::TileMap::RenderLayer(int layer, const Game::Rect& toRender, const Game::Rect& tSetC)
+void TileMap::RenderLayer(int layer, const Rect& toRender, const Rect& tSetC)
 {
     Game& inst = Game::GetInstance();
     
@@ -1302,7 +1372,7 @@ void Game::TileMap::RenderLayer(int layer, const Game::Rect& toRender, const Gam
 
 /////////////////////////////////////////////////// Game Resources Functions ///////////////////////////////////////////
 
-SDL_Texture* Game::Resources::GetImage(const std::string& file)
+SDL_Texture* Resources::GetImage(const std::string& file)
 {
     SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
     std::unordered_map<std::string, SDL_Texture*>::iterator it = imageTable.find(file);
@@ -1313,7 +1383,7 @@ SDL_Texture* Game::Resources::GetImage(const std::string& file)
     return it->second;
 }
 
-Mix_Music* Game::Resources::GetMusic(const std::string& file)
+Mix_Music* Resources::GetMusic(const std::string& file)
 {
     SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
     std::unordered_map<std::string, Mix_Music*>::iterator it = musicTable.find(file);
@@ -1324,7 +1394,7 @@ Mix_Music* Game::Resources::GetMusic(const std::string& file)
     return it->second;
 }
 
-Mix_Chunk* Game::Resources::GetSound(const std::string& file)
+Mix_Chunk* Resources::GetSound(const std::string& file)
 {
     SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
     std::unordered_map<std::string, Mix_Chunk*>::iterator it = soundTable.find(file);
@@ -1335,7 +1405,7 @@ Mix_Chunk* Game::Resources::GetSound(const std::string& file)
     return it->second;
 }
 
-void Game::Resources::ClearImages() 
+void Resources::ClearImages() 
 { 
     for(std::unordered_map<std::string, SDL_Texture*>::iterator it = imageTable.begin();
                 it != imageTable.end(); it++)
@@ -1344,7 +1414,7 @@ void Game::Resources::ClearImages()
     imageTable.clear();
 }
 
-void Game::Resources::ClearMusics() 
+void Resources::ClearMusics() 
 { 
     for(std::unordered_map<std::string, Mix_Music*>::iterator it = musicTable.begin();
                 it != musicTable.end(); it++)
@@ -1353,11 +1423,85 @@ void Game::Resources::ClearMusics()
     musicTable.clear();
 }
 
-void Game::Resources::ClearSounds() 
+void Resources::ClearSounds() 
 { 
     for(std::unordered_map<std::string, Mix_Chunk*>::iterator it = soundTable.begin();
                 it != soundTable.end(); it++)
         Mix_FreeChunk(it->second);
         
     soundTable.clear();
+}
+
+///////////////////////////////////////// Game InputManager Functions ///////////////////////////////
+
+InputManager::InputManager()
+    : quitRequested(false), mouseState{false},
+    mouseUpdate{0}, updateCounter(0), mouseX(0), mouseY(0)
+{}
+
+void InputManager::Update()
+{
+    SDL_Event event; 
+    SDL_GetMouseState(&this->mouseX, &this->mouseY);
+    this->quitRequested = false;
+    this->updateCounter++;
+
+    while(SDL_PollEvent(&event))
+    {
+        switch(event.type)
+        {
+            case SDL_KEYDOWN:
+                if(event.key.repeat != 1)
+                {
+                    keyState[event.key.keysym.sym] = true;
+                    keyUpdate[event.key.keysym.sym]= this->updateCounter;
+                }
+            break;
+            
+            case SDL_KEYUP:
+                keyState[event.key.keysym.sym] = false;
+                keyUpdate[event.key.keysym.sym]= this->updateCounter;
+            break;
+
+            case SDL_MOUSEBUTTONDOWN:
+                mouseState[event.button.button] = true;
+                mouseUpdate[event.button.button]= this->updateCounter;
+            break;
+
+            case SDL_MOUSEBUTTONUP:
+                mouseState[event.button.button] = false;
+                mouseUpdate[event.button.button]= this->updateCounter;
+            break;
+            
+            case SDL_QUIT:
+                this->quitRequested = true;
+            break;
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////// Game Camera functions ////////////////////////////////////////////////////////
+
+void Camera::Update(float dt)
+{
+    InputManager& controller = InputManager::GetInstance();
+    if(Camera::focus)
+        Camera::pos = Camera::focus->box.center();
+    else
+    {
+        Camera::pos.x += (controller.IsKeyDown(RIGHT_ARROW_KEY) - controller.IsKeyDown(LEFT_ARROW_KEY))*speed.x;
+        Camera::pos.y += (controller.IsKeyDown(DOWN_ARROW_KEY) - controller.IsKeyDown(UP_ARROW_KEY))*speed.y;
+        
+        Camera::pos.x = std::max(Camera::pos.x, 0.0f);
+        Camera::pos.y = std::max(Camera::pos.y, 0.0f);
+    }
+}
+
+/////////////////////////////////////////////////////////// Game CameraFollower functions //////////////////////////////////////////////////////////////
+
+void CameraFollower::Update(float dt) 
+{
+    const Vec2 cPos = Camera::pos;
+    this->associated.box.x = cPos.x;
+    this->associated.box.y = cPos.y;
 }
