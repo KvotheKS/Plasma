@@ -995,11 +995,11 @@ void Game::State::LoadAssets()
 {
     Game& inst = Game::GetInstance();
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
-    // Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
+    Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
     
     this->bg.AddComponents({
         spr,
-    //    msc,
+       msc,
     });
     
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
