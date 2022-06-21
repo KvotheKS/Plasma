@@ -22,7 +22,7 @@
 #include <fstream>
 #include <algorithm>
 #include <unordered_map>
-
+#include <functional>
 
 #define LEFT_ARROW_KEY    SDLK_LEFT 
 #define RIGHT_ARROW_KEY   SDLK_RIGHT 
@@ -199,7 +199,7 @@ public:
 class Component
 {
 protected:
-    GameObject& associated;
+    std::reference_wrapper<GameObject> associated;
 
 public:
     Component() : associated(*(GameObject*)nullptr) { }
@@ -317,7 +317,7 @@ public:
 class GameObject
 {
 private:
-    std::vector<Component*> components;
+    std::vector<std::unique_ptr<Component>> components;
     bool isDead;
 
 public:
@@ -338,7 +338,7 @@ public:
     void RequestDelete() { this->isDead = true;}
     
     void AddComponent(Component* cpt) 
-    { this->components.push_back(cpt); }
+    { this->components.push_back(std::unique_ptr<Component>(cpt));}
     
     void AddComponents(std::initializer_list<Component*> cpts);
     void RemoveComponent(Component* cpt);
@@ -985,7 +985,7 @@ void Sprite::Render()
 {
     SDL_Renderer* renderer = Game::GetInstance().GetRenderer();
     const Vec2 cPos = Camera::pos;
-    const Rect& wrp = this->associated.box;
+    const Rect& wrp = this->associated.get().box;
     
     SDL_Rect dst = {
         (int)(wrp.x - cPos.x),
@@ -1021,17 +1021,12 @@ GameObject::GameObject()
 
 GameObject::~GameObject()
 {
-    for(std::vector<Component*>::iterator it = this->components.begin(); 
-                    it != this->components.end(); ++it)
-    {
-        delete (*it);
-    }
     this->components.clear();
 }
     
 void GameObject::Update(float dt)
 {
-    for(std::vector<Component*>::iterator it = this->components.begin(); 
+    for(std::vector<std::unique_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
         (*it)->Update(dt);
     
@@ -1040,8 +1035,7 @@ void GameObject::Update(float dt)
 void GameObject::Render()
 {
     Game& gref = Game::GetInstance();
-    
-    for(std::vector<Component*>::iterator it = this->components.begin(); 
+    for(std::vector<std::unique_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         (*it)->Render();
@@ -1050,10 +1044,10 @@ void GameObject::Render()
 
 void GameObject::RemoveComponent(Component* cpt)
 {
-    for(std::vector<Component*>::iterator it = this->components.begin(); 
+    for(std::vector<std::unique_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
-        if(cpt == *it)
+        if(cpt == (*it).get())
         {
             this->components.erase(it);
             break;
@@ -1065,16 +1059,16 @@ void GameObject::AddComponents(std::initializer_list<Component*> cpts)
 {
     for(std::initializer_list<Component*>::iterator it = cpts.begin();
                 it != cpts.end(); ++it)
-        this->components.push_back(*it);
+        this->components.push_back(std::unique_ptr<Component>(*it));
 }
 
 Component* GameObject::GetComponent(const std::string& type)
 {
-    for(std::vector<Component*>::iterator it = this->components.begin(); 
+    for(std::vector<std::unique_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         if((*it)->Is(type))
-            return *it;
+            return (*it).get();
     }
 
     return nullptr;
@@ -1214,10 +1208,10 @@ void Face::Damage(int damage)
 
 void Face::Death()
 {
-    Sound* sptr = ((Sound*)this->associated.GetComponent("Sound"));
+    Sound* sptr = ((Sound*)this->associated.get().GetComponent("Sound"));
     if(sptr)
         sptr->Play();
-    this->associated.RequestDelete();
+    this->associated.get().RequestDelete();
 }
 
 void Face::Update(float dt) 
@@ -1226,7 +1220,7 @@ void Face::Update(float dt)
     const Vec2 cPos = Camera::pos;
 
     if(controller.MousePress(LEFT_MOUSE_BUTTON) && 
-        this->associated.box.in(Vec2(controller.GetMouseX() + cPos.x, controller.GetMouseY() + cPos.y)))
+        this->associated.get().box.in(Vec2(controller.GetMouseX() + cPos.x, controller.GetMouseY() + cPos.y)))
     {
         Damage(30);
     }
@@ -1336,10 +1330,10 @@ void TileMap::Render()
     Rect gCamera = { (float)cameraX, (float)cameraY, 
                            (float)inst.GetWidth(), (float)inst.GetHeight() };
 
-    if(!this->associated.box.intersect(gCamera))
+    if(!this->associated.get().box.intersect(gCamera))
         return;
     
-    Rect toRender = adapt(gCamera.intersection(this->associated.box.copy()));
+    Rect toRender = adapt(gCamera.intersection(this->associated.get().box.copy()));
     Rect tSetC = tileCord(toRender);
     
     toRender.x -= cameraX; toRender.y -= cameraY;
@@ -1502,6 +1496,6 @@ void Camera::Update(float dt)
 void CameraFollower::Update(float dt) 
 {
     const Vec2 cPos = Camera::pos;
-    this->associated.box.x = cPos.x;
-    this->associated.box.y = cPos.y;
+    this->associated.get().box.x = cPos.x;
+    this->associated.get().box.y = cPos.y;
 }
