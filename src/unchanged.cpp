@@ -1,3 +1,6 @@
+//////////////////////////// mudanca da parte 3 para a 4!
+//////////////////////////// a partir de agora, as classes serao separadas
+//////////////////////////// nao mais dentro da Game, mas sim de um namespace.
 #pragma once
 
 #include <./SDL2/SDL.h>
@@ -49,7 +52,6 @@ class Camera;
 class CameraFollower;
 class Alien;
 class Minion;
-class Bullet;
 
 class Game
 {
@@ -213,6 +215,11 @@ public:
 public:
     Component() : associated(*(GameObject*)nullptr) { this->started = false; }
     Component(GameObject& associated): associated(associated) { this->started = false; }
+    // Component(const Component* cpt) : associated(cpt->associated) { this->started = cpt->started; }
+    // Component(const Component& cpt) : associated(cpt.associated) { this->started = cpt.started; }
+    // Component(const Component&& cpt) : associated(cpt.associated) { this->started = cpt.started; }
+    // Component& operator=(const Component& cpt) { *this = std::move(cpt); return *this; }
+    // Component& operator=(const Component&& cpt) {*this = cpt; return *this;}
 
     virtual ~Component() {};
 
@@ -327,7 +334,7 @@ public:
 class GameObject
 {
 private:
-    std::vector<std::shared_ptr<Component>> components;
+    std::vector<std::unique_ptr<Component>> components;
     bool isDead;
 
 public:
@@ -350,7 +357,7 @@ public:
     void RequestDelete() { this->isDead = true;}
     
     void AddComponent(Component* cpt) 
-    { this->components.push_back(std::shared_ptr<Component>(cpt)); }
+    { this->components.push_back(std::unique_ptr<Component>(cpt)); }
     
     void AddComponents(std::initializer_list<Component*> cpts);
     void RemoveComponent(Component* cpt);
@@ -561,6 +568,7 @@ private:
     public:
         ActionType type;
         Vec2 pos;
+
     public:
         Action(ActionType type, float x, float y)
             : type(type), pos(x,y)
@@ -589,14 +597,14 @@ public:
     bool Is(const std::string& type) { return "Alien"; }
 };
 
-//////////////////////////////////////////// Game Minion Class ////////////////////////////////////////////////////////////////
+//////////////////////////////////////////// Game Minion Function ////////////////////////////////////////////////////////////////
 
 class Minion : public Component
 {
 private:
-    std::weak_ptr<GameObject> alienCenter;
+    GameObject& alienCenter;
     float arc;
-    const float speed = M_PI/30.0f;
+
 public:
     Minion(GameObject& associated, std::weak_ptr<GameObject> alienCenter, float arcOffsetDeg = 0.0f);
 
@@ -609,29 +617,6 @@ public:
 
 public:
     void Shoot(const Vec2 target);
-};
-
-/////////////////////////////////////////// Game Bullet Class /////////////////////////////////////////////////////////////////
-
-class Bullet : public Component
-{
-private:
-    Vec2 speed;
-    float distanceLeft;
-    int damage;
-
-public:
-    Bullet(GameObject& associated, float angle, float speed, 
-            int damage, float maxDistance, const std::string& sprite);
-        
-    void Update(float dt);
-    void Render();
-
-public:
-    bool Is(const std::string& type) { return type == "Bullet"; }
-
-public:
-    int GetDamage() { return this->damage; }
 };
 
 //////////////////////////////////////// Game Vec2 Functions ///////////////////////////////////////////////
@@ -1122,41 +1107,42 @@ GameObject::GameObject()
 
 GameObject::~GameObject()
 {
-    this->components.clear();
 }
 
 void GameObject::Start()
 {
-    for(std::vector<std::shared_ptr<Component>>::iterator it = this->components.begin();
+    /*for(std::vector<std::shared_ptr<Component>>::iterator it = this->components.begin();
         it != this->components.end(); ++it)
     {
         (*it)->Start();
     }
-    this->started = true;
+    this->started = true;*/
 }
 
 void GameObject::Update(float dt)
 {
     
-    for(std::vector<std::shared_ptr<Component>>::iterator it = this->components.begin(); 
+    /*for(std::vector<std::shared_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
         (*it)->Update(dt);
-    
+    */
 }
 
 void GameObject::Render()
 {
     Game& gref = Game::GetInstance();
-    
+    /*
     for(std::vector<std::shared_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         (*it)->Render();
     }
+    */
 }
 
 void GameObject::RemoveComponent(Component* cpt)
 {
+    /*
     for(std::vector<std::shared_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
@@ -1166,24 +1152,28 @@ void GameObject::RemoveComponent(Component* cpt)
             break;
         }
     }
+    */
 }
 
 void GameObject::AddComponents(std::initializer_list<Component*> cpts)
 {
+    /*
     for(std::initializer_list<Component*>::iterator it = cpts.begin();
                 it != cpts.end(); ++it)
         this->components.push_back(std::shared_ptr<Component>(*it));
+    */
 }
 
 Component* GameObject::GetComponent(const std::string& type)
 {
+    /*
     for(std::vector<std::shared_ptr<Component>>::iterator it = this->components.begin(); 
                     it != this->components.end(); ++it)
     {
         if((*it)->Is(type))
             return (*it).get();
     }
-
+    */
     return nullptr;
 }
 
@@ -1224,19 +1214,18 @@ void State::LoadAssets()
     go->box = { 0, 0, (float)map->GetPWidth(), (float)map->GetPHeight() };
     
     go->AddComponent(map);
-    AddObject(go);
     this->objectArray.push_back(std::shared_ptr<GameObject>(go));
 
     go = new GameObject();
     Alien* al = new Alien(*go, 5);
     go->AddComponent(al);
-    AddObject(go);
+    this->objectArray.push_back(std::shared_ptr<GameObject>(go));
 }
 
 void State::Start()
 {
-    this->started = true;
     LoadAssets();
+    this->started = true;
 }
 
 void State::Update(float dt)
@@ -1584,14 +1573,13 @@ Alien::Alien(GameObject& associated, int nMinions)
 {
     this->hp = 30;
     this->speed = {4,4};
-    this->minionArray.resize(nMinions);
 
     Sprite* spr = new Sprite(associated, "./resources/img/alien.png");
     
     Vec2 cb = {512,300};
 
-    this->associated.box.w = std::max(spr->GetWidth(), spr->GetHeight());
-    this->associated.box.h = this->associated.box.w;
+    this->associated.box.w = spr->GetWidth();
+    this->associated.box.h = spr->GetHeight();
     this->associated.box.setCenter(cb);
     this->associated.AddComponent(spr);
 }
@@ -1604,18 +1592,6 @@ Alien::~Alien()
 
 void Alien::Start() 
 {
-    State& st = Game::GetInstance().GetState();
-    
-    int vSize = this->minionArray.size();
-    std::cout << vSize;
-    float arc = 0.0f;
-    for(int i = 0; i < vSize; i++, arc += (M_PI*2)/((float)vSize))
-    {
-        GameObject* go = new GameObject;
-        go->AddComponent(new Minion(*go, st.GetObjectPtr(&this->associated), arc));
-        st.AddObject(go);
-    }
-
     this->started = true;
 }
 
@@ -1660,55 +1636,3 @@ void Alien::Move(Alien::Action& act)
     asc.box.x += (fs.x >= 0.0f)*nm.x + (fs.x <= 0.0f)*nm.x;
     asc.box.y += (fs.y >= 0.0f)*nm.y + (fs.y <= 0.0f)*nm.y;
 }
-
-////////////////////////////////////////////////// Game minion functions ////////////////////////////////////////////////////////////
-
-Minion::Minion(GameObject& associated, std::weak_ptr<GameObject> alienCenter, float arcOffsetDeg)
-    : Component(associated)
-{
-    this->alienCenter = alienCenter;
-    this->arc = arcOffsetDeg;
-
-    Sprite* spr = new Sprite(associated, "./resources/img/minion.png");
-    
-    associated.AddComponent(spr);
-    associated.box.w = spr->GetWidth();
-    associated.box.h = spr->GetHeight();
-}
-
-void Minion::Update(float dt)
-{
-    std::shared_ptr<GameObject> ptr = this->alienCenter.lock();
-    this->arc += this->speed;
-    
-    if(ptr == std::shared_ptr<GameObject>())
-    {
-        this->associated.RequestDelete();
-        return;
-    }
-    Vec2 offset = Vec2(ptr->box.w/2 + ptr->box.h/2, 0);
-    offset.Rotate(this->arc);
-    offset += ptr->box.center();
-    
-    this->associated.box.setCenter(offset);
-}
-
-void Minion::Render()
-{}
-
-void Minion::Shoot(Vec2 target)
-{
-    
-}
-
-///////////////////////////////////////////////// Game Bullet Functions ////////////////////////////////////////////
-
-Bullet::Bullet(GameObject& associated, float angle, float speed, int damage, float maxDistance, const std::string& sprite)
-    : Component(associated)
-{
-    
-}
-
-void Update(float dt) {}
-
-void Render() {}
