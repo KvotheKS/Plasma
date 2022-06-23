@@ -1,7 +1,4 @@
-#include "./Base.h"
-
-Game* Game::instance = nullptr;
-bool Game::allocated = false;
+#include "../include/Game.hpp"
 
 int main(int argc, char** argv)
 {
