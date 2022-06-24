@@ -21,6 +21,11 @@ private:
     int width, height;
     SDL_Rect clipRect;
     Vec2 scale;
+
+private:
+    int frameCount, currentFrame;
+    float timeElapsed, frameTime;
+
 public:
     double angleDeg;
 
@@ -31,7 +36,8 @@ public:
 
     Sprite(GameObject& associated);
 
-    Sprite(GameObject& associated, const std::string& file);
+    Sprite(GameObject& associated, const std::string& file
+        ,int frameCount = 1, float frameTime = 1.0f);
 
     ~Sprite();
 
@@ -48,7 +54,10 @@ public:
     void Render(float x, float y);
 
 public:
-    void SetScale(float scaleX, float scaleY);
+    void SetScale(float scaleX, float scaleY);  
+    void SetFrame(int frame);
+    void SetFrameCount(int frameCount);
+    void SetFrameTime(float frameTime);
 
 public:
     int GetWidth();
