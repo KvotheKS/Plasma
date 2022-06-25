@@ -37,7 +37,7 @@ void State::LoadAssets()
     Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
 
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
-
+    msc->Play();
     this->bg.AddComponents({
         spr,
         msc,
