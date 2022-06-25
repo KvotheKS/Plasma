@@ -3,6 +3,7 @@
 #include "../include/Game.hpp"
 #include "../include/Resources.hpp"
 #include "../include/InputManager.hpp"
+#include "../include/Error.hpp"
 #include <ctime>
 #include <cstdlib>
 
@@ -102,7 +103,6 @@ Game& Game::GetInstance(const char* Title, int width, int height)
 {  
     if(!Game::instance)
     {
-        std::cout << "ok";
         Game::allocated = true;
         Game::instance = new Game(Title, width, height);
     }
@@ -119,11 +119,11 @@ void Game::Run()
         CalculateDeltaTime();
 
         controller.Update();
-
+        std::cout << "uptd";
         this->state->Update(dt);
-        
+        std::cout << "tks";
         this->state->Render();
-        
+        std::cout << "Render";
         SDL_RenderPresent(this->renderer);
         
         SDL_Delay(this->period);

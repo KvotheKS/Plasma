@@ -16,6 +16,7 @@
 #include "../include/Alien.hpp"
 #include "../include/Error.hpp"
 #include <memory>
+#include <iostream>
 
 //////////////////////////////////////////////// Game State Functions /////////////////////////////////////////////////
 
@@ -36,6 +37,7 @@ void State::LoadAssets()
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
     Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
 
+    msc->Play();
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
 
     this->bg.AddComponents({
@@ -57,12 +59,12 @@ void State::LoadAssets()
     
     go->AddComponent(map);
     AddObject(go);
-    this->objectArray.push_back(std::shared_ptr<GameObject>(go));
 
-    go = new GameObject();
-    Alien* al = new Alien(*go, 5);
-    go->AddComponent(al);
-    AddObject(go);
+    // go = new GameObject();
+
+    // Alien* al = new Alien(*go, 5);
+    // go->AddComponent(al);
+    // AddObject(go);
 }
 
 void State::Start()

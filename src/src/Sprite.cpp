@@ -17,6 +17,10 @@ Sprite::Sprite() : Component()
     this->clipRect = {0, 0, 0, 0};
     this->scale = {1,1};
     this->angleDeg = 0.0f;
+    this->frameCount = 1;
+    this->frameTime = 1;
+    this->timeElapsed = 0.0f;
+    this->currentFrame = 0;
 }
 
 Sprite::Sprite(GameObject& associated, const std::string& file,
@@ -30,6 +34,8 @@ Sprite::Sprite(GameObject& associated, const std::string& file,
     this->angleDeg = 0.0f;
     this->frameCount = frameCount;
     this->frameTime = frameTime;
+    this->timeElapsed = 0.0f;
+    this->currentFrame = 0;
     Open(file);
 }
 
@@ -71,7 +77,7 @@ void Sprite::Update(float dt)
 {
     this->timeElapsed += dt;
     
-    if(this->frameTime >= this->timeElapsed)
+    if(this->frameTime <= this->timeElapsed)
     {
         this->timeElapsed -= this->frameTime;   
         this->currentFrame = (this->currentFrame + 1)%this->frameCount;
@@ -104,8 +110,8 @@ void Sprite::Render(float x, float y)
     SDL_Rect dst = {
         (int)x,
         (int)y,
-        this->clipRect.w, 
-        this->clipRect.h
+        (int)this->GetWidth(), 
+        (int)this->GetHeight()
     };
 
     SDL_RenderCopy(renderer, this->texture, &this->clipRect, &dst);

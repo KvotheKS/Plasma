@@ -31,8 +31,7 @@ void Music::Play(int times)
 {
     if(!this->music)
         Game::ThrowException();
-    if(!Mix_PlayingMusic())
-        Mix_PlayMusic(this->music, times);
+    Mix_PlayMusic(this->music, times);
 }
 
 void Music::Stop(int msToStop)
@@ -40,7 +39,8 @@ void Music::Stop(int msToStop)
     Mix_FadeOutMusic(msToStop);
 }
 
-void Music::Update(float dt) {}
+void Music::Update(float dt) 
+{}
 void Music::Render() {}
 
 
