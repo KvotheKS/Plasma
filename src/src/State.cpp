@@ -32,7 +32,6 @@ void State::LoadAssets()
     Game& inst = Game::GetInstance();
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
     Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
-    msc->Play();
     this->bg.AddComponents({
         spr,
         msc,
@@ -96,6 +95,7 @@ void State::Render()
         return;
 
     this->bg.Render();
+    ((Music*)this->bg.GetComponent("Music"))->Play(1);
     for(std::vector<std::unique_ptr<GameObject>>::iterator it = this->objectArray.begin();
             it != this->objectArray.end(); ++it)
         (*it)->Render();
