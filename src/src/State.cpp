@@ -37,7 +37,6 @@ void State::LoadAssets()
     Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
 
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
-    msc->Play();
     this->bg.AddComponents({
         spr,
         msc,
@@ -109,6 +108,7 @@ void State::Render()
         return;
 
     this->bg.Render();
+    ((Music*)this->bg.GetComponent("Music"))->Play(1);
     for(std::vector<std::shared_ptr<GameObject>>::iterator it = this->objectArray.begin();
             it != this->objectArray.end(); ++it)
         (*it)->Render();
