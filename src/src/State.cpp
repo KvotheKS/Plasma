@@ -32,7 +32,7 @@ void State::LoadAssets()
     Game& inst = Game::GetInstance();
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
     Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
-
+    msc->Play();
     this->bg.AddComponents({
         spr,
         msc,
