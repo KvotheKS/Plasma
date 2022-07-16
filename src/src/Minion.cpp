@@ -65,7 +65,7 @@ void Minion::Shoot(Vec2 target)
     go->box = Rect(tCen.x, tCen.y);
     
     Bullet* ptr = new Bullet(*go, angl,this->bSpeed, this->damage, 1200,
-        "./resources/img/minionbullet1.png");
+        new Sprite(*go, "./resources/img/minionbullet2.png", 3, 3.0f));
     
     go->AddComponent(ptr);
     

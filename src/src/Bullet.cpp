@@ -8,19 +8,16 @@
 #include <string>
 #include <cmath>
 
-Bullet::Bullet(GameObject& associated, float angle, float speed, int damage, float maxDistance, const std::string& sprite)
+Bullet::Bullet(GameObject& associated, float angle, float speed, int damage, float maxDistance, Sprite* sprite)
     : Component(associated)
 {
 	this->speed = Vec2(speed).Rotate(angle);
 	this->damage = damage;
 	this->distanceLeft = maxDistance;
-	Sprite* spr = new Sprite(associated, sprite);
-	spr->angleDeg = angle*(180.0/M_PI);
-	associated.box.w = spr->GetWidth();
-	associated.box.h = spr->GetHeight();    
-	
-	associated.AddComponent(spr);
-
+	sprite->angleDeg = angle*(180.0/M_PI);
+	associated.box.w = sprite->GetWidth();
+	associated.box.h = sprite->GetHeight();    
+	associated.AddComponent(sprite);
 }
 
 void Bullet::Update(float dt) 

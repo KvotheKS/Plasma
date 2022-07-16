@@ -34,5 +34,4 @@ public:
 
 public:
     bool Is(const std::string& type);
-
 };

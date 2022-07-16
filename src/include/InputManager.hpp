@@ -14,6 +14,10 @@
 #define SPACEBAR_KEY      SDLK_SPACE
 #define LEFT_MOUSE_BUTTON SDL_BUTTON_LEFT
 #define RIGHT_MOUSE_BUTTON   SDL_BUTTON_RIGHT
+#define W_KEY SDLK_w
+#define S_KEY SDLK_s
+#define D_KEY SDLK_d
+#define A_KEY SDLK_a
 
 #include "./decl.hpp"
 #include <unordered_map>

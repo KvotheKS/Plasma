@@ -37,7 +37,6 @@ void State::LoadAssets()
     Sprite* spr = new Sprite(this->bg, "./resources/img/ocean.jpg");
     Music* msc = new Music(this->bg, "./resources/audio/stageState.ogg");
 
-    msc->Play();
     this->bg.box = { 0, 0, (float)inst.GetWidth(), (float)inst.GetHeight() };
 
     this->bg.AddComponents({
@@ -60,11 +59,11 @@ void State::LoadAssets()
     go->AddComponent(map);
     AddObject(go);
 
-    // go = new GameObject();
+    go = new GameObject();
 
-    // Alien* al = new Alien(*go, 5);
-    // go->AddComponent(al);
-    // AddObject(go);
+    Alien* al = new Alien(*go, 5);
+    go->AddComponent(al);
+    AddObject(go);
 }
 
 void State::Start()
@@ -111,6 +110,7 @@ void State::Render()
         return;
 
     this->bg.Render();
+    ((Music*)this->bg.GetComponent("Music"))->Play(1);
     for(std::vector<std::shared_ptr<GameObject>>::iterator it = this->objectArray.begin();
             it != this->objectArray.end(); ++it)
         (*it)->Render();

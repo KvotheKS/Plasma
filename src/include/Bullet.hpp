@@ -12,7 +12,7 @@ private:
 
 public:
     Bullet(GameObject& associated, float angle, float speed, 
-            int damage, float maxDistance, const std::string& sprite);
+            int damage, float maxDistance, Sprite* sprite);
     
     void Update(float dt);
     void Render();
