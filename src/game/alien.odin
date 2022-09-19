@@ -31,10 +31,10 @@ CreateAlien :: proc(center: eng.Vec2) -> Alien{
     return Alien{anim, center - SpriteCenter(&anim.spr),Vec2{350,0}, {}, 40,CreateMinions(5)}
 }
 
-AlienIA :: proc(alien: ^Alien, player: ^Penguin, bullets: ^[dynamic]eng.Bullet) {
+AlienIA :: proc(alien: ^Alien, player: ^Penguin, bullets: ^[dynamic]eng.Bullet, layers: ^Layers) {
     using eng, alien
     dt := DeltaTime()
-    if actqu.len > 0 { PopAction(alien, bullets) }
+    if actqu.len > 0 { PopAction(alien, bullets, layers) }
     else {
         aliencenter := pos+SpriteCenter(&anim.spr)
         penguincenter := player.pos+SpriteCenter(&player.body.spr)
@@ -55,7 +55,7 @@ AlienIA :: proc(alien: ^Alien, player: ^Penguin, bullets: ^[dynamic]eng.Bullet) 
     }
 }
 
-Moving :: proc(alien: ^Alien, action: Move) -> bool {
+Moving :: proc(alien: ^Alien, action: Move, layers: ^Layers) -> bool {
     using eng
     alvel := Rotate(Vec2{ALIENSPEED,0}*DeltaTime(), Theta(action.finalpos-alien.pos))
     if Mag(alvel) > Dist(action.finalpos,alien.pos) { 
@@ -63,13 +63,15 @@ Moving :: proc(alien: ^Alien, action: Move) -> bool {
         return true
     }
     alien.pos += alvel
+    alien.pos.x = max(alien.pos.x, layers.pos[0].x)
+    alien.pos.x = min(alien.pos.x, layers.pos[0].x + 1408 - f32(alien.anim.spr.w))
+    alien.pos.y = max(alien.pos.y, layers.pos[0].y)
+    alien.pos.y = min(alien.pos.y, layers.pos[0].y + 1280 - f32(alien.anim.spr.h))
     return false
 }
 
 Shooting :: proc(alien: ^Alien, action: Shoot, bullets: ^[dynamic]eng.Bullet) -> bool {
     using eng
-    
-    if len(alien.minions) == 0 { return true }
     aliencspr := SpriteCenter(&alien.anim.spr)
     aliencenter := alien.pos + aliencspr
     
@@ -101,14 +103,14 @@ Resting :: proc(alien: ^Alien, action: ^Rest) -> bool {
     return false
 }
 
-PopAction :: proc(alien: ^Alien, bullets: ^[dynamic]eng.Bullet) {
+PopAction :: proc(alien: ^Alien, bullets: ^[dynamic]eng.Bullet, layers: ^Layers) {
     using QU
     if alien.actqu.len > 0 {
         tmp := get_ptr(&alien.actqu,0)
         toPop : bool = false
         
         #partial switch act in tmp {
-            case Move:  toPop = Moving(alien, act)
+            case Move:  toPop = Moving(alien, act, layers)
             case Shoot: toPop = Shooting(alien, act, bullets)
             case Rest:  toPop = Resting(alien, &tmp.(Rest))
         }
@@ -117,14 +119,13 @@ PopAction :: proc(alien: ^Alien, bullets: ^[dynamic]eng.Bullet) {
     }
 }
 
-AlienCollision :: proc(
-    alien: ^^Alien, bullets: ^[dynamic]eng.Bullet, 
-    layers: ^Layers, player: ^Penguin,
-    particles: ^[dynamic]eng.SimpleParticle) 
-{
-
+AlienCollision :: proc(alien: ^^Alien, bullets: ^[dynamic]eng.Bullet, 
+    player: ^Penguin,
+    particles: ^[dynamic]eng.SimpleParticle) {
     using eng
+
     aliencspr := SpriteCenter(&alien^.anim.spr)
+    
     aliencenter := alien^.pos + aliencspr
 
     for i := 0; i < len(bullets^); i+=1 {
@@ -136,8 +137,7 @@ AlienCollision :: proc(
             
             IsColliding(minionpos, bullets[i].pos,
                 SpriteDimensions(&alien^.minions[j].cpl),SpriteDimensions(&bullets[i].spr),
-                alien^.minions[j].cpl.angle,bullets[i].spr.angle) 
-            {
+                alien^.minions[j].cpl.angle,bullets[i].spr.angle) {
                 
                 MinionDeath(aliencenter + Rotate(aliencspr+30,alien^.minions[j].angle), particles)
 
@@ -153,16 +153,15 @@ AlienCollision :: proc(
         if !wasHit && bullets[i].owner == 0 && 
             IsColliding(alien^.pos, bullets[i].pos,
                 SpriteDimensions(&alien^.anim),SpriteDimensions(&bullets[i].spr),
-                alien^.anim.angle,bullets[i].spr.angle) 
-        {
+                alien^.anim.angle,bullets[i].spr.angle) {
             
             alien^.hp -= bullets[i].damage
             unordered_remove(bullets, i)
             i-=1
             
-            if alien^.hp <= 0 {
+            if alien^.hp <= 0 && player != nil {
                 AlienDeath(alien, particles)
-                if player != nil { LoadPlayerWin() }
+                ChangeWorldState(3)
                 return
             }
         }
@@ -173,8 +172,7 @@ AlienDeath :: proc(alien: ^^Alien, particles: ^[dynamic]eng.SimpleParticle) {
     using eng
     cpl := LoadCompleteSprite("./resources/img/aliendeath.png", {2,2}, 0, 4, FRAME*12)
     ptcpos := alien^.pos + SpriteCenter(&alien^.anim) - SpriteCenter(&cpl)
-    snd := CreateSound("./resources/audio/boom.wav")
-    append(particles, CreateSimpleParticle(cpl, ptcpos, 0,0, 50*FRAME,snd))
+    append(particles, CreateSimpleParticle(cpl, ptcpos, 0,0, 50*FRAME))
 
     free(alien^)
     alien^ = nil

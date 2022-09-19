@@ -51,9 +51,13 @@ ChangeWorldState :: proc(idx : i32) {
     CallLoader()
 }
 
+SetWorldState :: proc(idx : i32) {
+    __WorldStates.currState = idx-1
+}
+
 GameLoop :: proc() {
     ctx := InitAll()
-    if __WorldStates.currState == 0 { CallLoader() }
+    CallLoader() 
 
     for !sdl.QuitRequested() {
         Clock()

@@ -28,10 +28,14 @@ CreatePenguin :: proc(pos : eng.Vec2) -> Penguin {
     return Penguin{bd, gn, pos + SpriteCenter(&bd.spr), Vec2{}, 0, 45}
 }
 
-MovePenguin :: proc(penguin : ^Penguin, dt : f32) {
+MovePenguin :: proc(penguin : ^Penguin, dt : f32, layers: ^Layers) {
     using penguin, eng, sdl.Scancode
     
     pos += vel*dt
+    pos.x = max(pos.x, layers.pos[0].x)
+    pos.x = min(pos.x, layers.pos[0].x + 1408 - f32(body.spr.w))
+    pos.y = max(pos.y, layers.pos[0].y)
+    pos.y = min(pos.y, layers.pos[0].y + 1280 - f32(body.spr.h))
 
     lastAngle := body.angle
     
@@ -82,21 +86,21 @@ RenderPenguin :: proc(penguin: ^Penguin) {
     RenderAnimated(&gun, pos)
 }
 
-PenguinCollisions :: proc(player: ^Penguin, bullets: ^[dynamic]eng.Bullet, layers: ^Layers) {
+PenguinCollisions :: proc(player: ^Penguin, bullets: ^[dynamic]eng.Bullet) {
     using eng
     for i := 0; i < len(bullets^); i+=1 {
         if bullets[i].owner != 0 && 
             IsColliding(player.pos, bullets[i].pos,
                 SpriteDimensions(&player.body),SpriteDimensions(&bullets[i].spr),
-                player.body.angle,bullets[i].spr.angle) 
-        {
+                player.body.angle,bullets[i].spr.angle) {
             
             player.hp -= bullets[i].damage
+            fmt.println(player.hp)
             unordered_remove(bullets, i)
             i-=1
             
             if player.hp <= 0 {
-                LoadPlayerDeath()
+                ChangeWorldState(2)
                 return
             }
         }

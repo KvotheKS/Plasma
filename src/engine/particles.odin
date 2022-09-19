@@ -4,15 +4,10 @@ SimpleParticle :: struct {
     cpl : CompleteSprite,
     pos, speed : Vec2,
     timeout, currtime : f32,
-    sound: Sound,
-    times: i32,
 }
 
-CreateSimpleParticle :: proc(cpl: CompleteSprite, pos : Vec2, speed, angle, timeout : f32, sound: Sound = {}, times:i32=0) -> SimpleParticle{
-    smpt := SimpleParticle{cpl, pos, Rotate(Vec2{speed,0},angle), timeout, 0, sound,times}
-    PlaySound(&smpt.sound, times)    
-    
-    return smpt
+CreateSimpleParticle :: proc(cpl: CompleteSprite, pos : Vec2, speed, angle, timeout : f32) -> SimpleParticle{
+    return SimpleParticle{cpl, pos, Rotate(Vec2{speed,0},angle), timeout, 0}
 }
 
 UpdateSimpleParticles :: proc(sprt : ^[dynamic]SimpleParticle){

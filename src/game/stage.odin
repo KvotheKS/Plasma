@@ -14,7 +14,6 @@ Layers :: struct {
 World :: struct {
     player : ^Penguin,
     stickyBkg : eng.Sprite,
-    penguinMusic : eng.Music,
     layers : Layers,
     bullets : [dynamic]eng.Bullet,
     particles: [dynamic]eng.SimpleParticle,
@@ -24,6 +23,7 @@ World :: struct {
 FinalTransition :: struct {
     lwspr : eng.Sprite,
     timeout, showscreen : f32,
+    text : eng.Text,
 }
 
 world1 : World;
@@ -33,8 +33,6 @@ LoadStage1 :: proc() {
     using world1
     using eng
     stickyBkg = LoadSprite("./resources/img/ocean.jpg")
-    penguinMusic = CreateMusic("./resources/audio/stageState.ogg")
-    PlayMusic(&penguinMusic)
     layers.tileMap = CreateTilemap(
         "./resources/img/tileset.png", 
         "./resources/map/tileMap.txt",
@@ -106,7 +104,7 @@ UpdateElementsStage1 :: proc(dt : f32) -> bool {
             if FinishWorld.timeout > -FinishWorld.showscreen {
                 sdl.SetTextureAlphaMod(FinishWorld.lwspr.texture, u8(255.0*(-FinishWorld.timeout/FinishWorld.showscreen)))
             }
-            else if AnyKeyDown({.SPACE, .ESCAPE, .LCTRL}) { return false }
+            else { ChangeWorldState(5) }
         }
     }
     
@@ -118,17 +116,22 @@ UpdateElementsStage1 :: proc(dt : f32) -> bool {
 UpdateStage1 :: proc(dt : f32) -> bool {
     using world1
     using eng
+
+    if AnyKeyDown({.ESCAPE}) {
+        return false
+    }
+    
     if player != nil {
-        MovePenguin(player, dt)
-        if enemie != nil { AlienIA(enemie, player, &bullets) }
+        MovePenguin(player, dt, &layers)
+        if enemie != nil { AlienIA(enemie, player, &bullets, &layers) }
     }
 
     if !UpdateElementsStage1(dt) { return false }
     
     RenderEveryStage1()
     
-    if enemie != nil { AlienCollision(&enemie, &bullets, &layers, player, &particles) }
-    if player != nil { PenguinCollisions(player, &bullets, &layers) }
+    if enemie != nil { AlienCollision(&enemie, &bullets,  player, &particles) }
+    if player != nil { PenguinCollisions(player, &bullets) }
 
     return true
 }
@@ -138,8 +141,6 @@ LoadPlayerDeath :: proc() {
     FinishWorld.lwspr = LoadSprite("./resources/img/lose.jpg")
     sdl.SetTextureBlendMode(FinishWorld.lwspr.texture, sdl.BlendMode.BLEND);
     sdl.SetTextureAlphaMod(FinishWorld.lwspr.texture, 0)
-    penguinMusic = CreateMusic("./resources/audio/endStateLose.ogg")
-    PlayMusic(&penguinMusic)
     FinishWorld.timeout = 60*FRAME
     FinishWorld.showscreen = 240*FRAME
 
@@ -156,9 +157,45 @@ LoadPlayerWin :: proc() {
     FinishWorld.lwspr = LoadSprite("./resources/img/win.jpg")
     sdl.SetTextureBlendMode(FinishWorld.lwspr.texture, sdl.BlendMode.BLEND);
     sdl.SetTextureAlphaMod(FinishWorld.lwspr.texture, 0)
-    penguinMusic = CreateMusic("./resources/audio/endStateWin.ogg")
-    PlayMusic(&penguinMusic)
     FinishWorld.timeout = 60*FRAME
     FinishWorld.showscreen = 240*FRAME
     player.hp = 10000
+}
+
+UpdateTransition :: proc(dt : f32) -> bool {
+    using eng, world1
+    RenderWindowSprite(&FinishWorld.lwspr)
+    postmp := __camera.size
+
+    RenderFont(&FinishWorld.text, Vec2{postmp.x*0.6, postmp.y*0.15})
+    if AnyKeyDown({.ESCAPE}) {
+        return false
+    }
+    else if WasKeyPressed() {
+        ChangeWorldState(1)
+    }
+    return true
+}
+
+LoadTransition :: proc() {
+    using eng, FinishWorld, world1
+    postmp := __camera.size
+    txtcolor := sdl.Color{0,255,0,255}
+    if player == nil {
+        txtcolor = sdl.Color{255,0,0,255}
+    }
+
+    FinishWorld.text = LoadFont(
+        "./resources/font/Call me maybe.ttf", 
+        16, 
+        Vec2{postmp.x*0.2,postmp.y*0.85},
+        .SOLID,
+        "Pressione qualquer botao para jogar",
+        txtcolor
+    )
+}
+
+DestructTransition :: proc() {
+    DestructStage1()
+    FinishWorld.showscreen = 0
 }

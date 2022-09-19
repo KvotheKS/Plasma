@@ -3,6 +3,7 @@ package engine
 import "core:fmt"
 import sdl "vendor:sdl2"
 import img "vendor:sdl2/image"
+import ttf "vendor:sdl2/ttf"
 import audio "vendor:sdl2/mixer"
 
 Context :: struct {
@@ -17,11 +18,11 @@ InitAll :: proc() -> Context {
     sdl.Init(sdl.INIT_VIDEO | sdl.INIT_AUDIO | sdl.INIT_TIMER)
     img.Init(img.INIT_JPG | img.INIT_PNG | img.INIT_TIF)
     audio.Init(audio.INIT_FLAC | audio.INIT_OGG | audio.INIT_MP3)
-    audio.OpenAudio(audio.DEFAULT_FREQUENCY, audio.DEFAULT_FORMAT,audio.DEFAULT_CHANNELS, 1024)
     audio.AllocateChannels(32)
-    
+    ttf.Init()
+
     window := sdl.CreateWindow(
-        "Teste inicial", 
+        "Penguin War Crimes", 
         sdl.WINDOWPOS_CENTERED, 
         sdl.WINDOWPOS_CENTERED, 
         640, 
@@ -50,5 +51,6 @@ DestroyContext :: proc() {
     sdl.DestroyRenderer(__ctx.renderer)
     img.Quit();
     audio.Quit();
+    ttf.Quit();
     sdl.Quit();
 }

@@ -40,6 +40,5 @@ MinionDeath :: proc(center : eng.Vec2, particles: ^[dynamic]eng.SimpleParticle) 
     using eng
     cpl := LoadCompleteSprite("./resources/img/aliendeath.png", {0.5,0.5}, 0, 4, FRAME*5)
     ptcpos := center - SpriteCenter(&cpl)
-    snd := CreateSound("./resources/audio/boom.wav")
-    append(particles, CreateSimpleParticle(cpl, ptcpos, 0,0, 25*FRAME, snd))
+    append(particles, CreateSimpleParticle(cpl, ptcpos, 0,0, 25*FRAME))
 }

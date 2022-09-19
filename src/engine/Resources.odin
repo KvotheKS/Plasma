@@ -1,6 +1,5 @@
 package engine
 
-import "core:fmt"
 import sdl "vendor:sdl2"
 import img "vendor:sdl2/image"
 import audio "vendor:sdl2/mixer"
@@ -27,7 +26,6 @@ GetSound :: proc(file : cstring) -> ^audio.Chunk{
 
 GetSong :: proc(file : cstring) -> ^audio.Music{
     rsc.songs[file] = rsc.songs[file] or_else audio.LoadMUS(file)
-    fmt.println(sdl.GetError())
     return rsc.songs[file]
 }
 
